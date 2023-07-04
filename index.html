@@ -15,6 +15,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+	    border: 1px solid #ddd;
+	    border-left: none;
+            border-right: none;
         }
         
         .footer-left {
@@ -31,10 +34,160 @@
             flex: 1;
             text-align: right;
         }
+        
+        .stylized-text {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .stylized-text:hover {
+            color: #f79413;
+            text-shadow: 0px 5px rgba(255, 255, 255, 1);
+        }
+        
+        .bitcointech-text {
+            font-family: "Arial Black", sans-serif;
+        }
+        
+        /* Styles for the tabbed pages */
+        .tab-container {
+        }
+        
+        .tab-titles {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 0;
+        }
+        
+        .tab-title {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            cursor: pointer;
+        }
+        
+        .tab-title.active {
+            background-color: #fff;
+        }
+        
+        .tab-content {
+            padding: 10px 30px 10px 30px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+        }
+        
+        .tab-title,
+        .tab-content {
+            box-sizing: border-box;
+	    border-bottom: none;
+        }
+        
+        .tab-content h2 {
+
+        }
+        
+        .tab-title-container {
+            text-align: center;
+            background-color: #f1f1f1;
+            padding: 0px;
+            margin-bottom: 0px;
+        }
+        
+        .page-title {
+            background-color: #f1f1f1;
+            padding: 10px;
+            text-align: center;
+            margin: 0;
+        }
+        
+        .title-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .title-image {
+            height: 24px;
+            width: 24px;
+            margin-right: 10px;
+        }
     </style>
+    <script>
+        function openTab(tabName) {
+            // Hide all tabs
+            var tabs = document.getElementsByClassName("tab-content");
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].style.display = "none";
+            }
+            
+            // Remove the active class from all tab titles
+            var tabTitles = document.getElementsByClassName("tab-title");
+            for (var i = 0; i < tabTitles.length; i++) {
+                tabTitles[i].classList.remove("active");
+            }
+            
+            // Show the selected tab and set the tab title as active
+            document.getElementById(tabName).style.display = "block";
+            document.getElementById(tabName + "-title").classList.add("active");
+            
+            // Update the URL or add a hash based on the active tab
+            var url = window.location.href;
+            if (url.includes("#")) {
+                url = url.substring(0, url.indexOf("#"));
+            }
+            window.history.replaceState(null, null, url + "#" + tabName);
+        }
+        
+	function checkHash() {
+                // Check if there is a hash in the URL and open the corresponding tab
+        	var hash = window.location.hash.substring(1);
+        	if (hash) {
+            		openTab(hash);
+        	}
+	}
+
+    </script>
 </head>
-<body>
-    <h1>Hello, World!</h1>
+<body onload="checkHash()">
+    <div class="page-title">
+        <h1 class="stylized-text" onclick="location.href='http://bitcointech.wiki'">
+            <div class="title-wrapper">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/4/46/Bitcoin.svg" alt="Bitcoin Logo" class="title-image">
+                <span class="bitcointech-text">bitcointech.wiki</span>
+            </div>
+        </h1>
+    </div>
+    
+    <div class="tab-container">
+        <div class="tab-title-container">
+            <div class="tab-titles">
+                <div class="tab-title active" id="learn-title" onclick="openTab('learn')">Learn</div>
+                <div class="tab-title" id="technical-title" onclick="openTab('technical')">Technical</div>
+                <div class="tab-title" id="editor-title" onclick="openTab('editor')">Transaction Editor</div>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="learn">
+            <h2>Learn</h2>
+            <p>This is the Learn tab. Placeholder text for learning Bitcoin technology.</p>
+        </div>
+        
+        <div class="tab-content" id="technical" style="display: none;">
+            <h2>Advanced Info, Technical Specs, etc.</h2>
+            <p>This is the Technical tab. Placeholder text for technical Bitcoin information.</p>
+        </div>
+        
+        <div class="tab-content" id="editor" style="display: none;">
+            <h2>WYSIWYG Transaction Editor</h2>
+            <p>This is the Transaction Editor tab. Placeholder text for editing Bitcoin transactions.</p>
+        </div>
+    </div>
     
     <div class="footer">
         <div class="footer-left">
@@ -44,7 +197,7 @@
             donate - onchain <a href="bitcoin:bc1q46kpmd3pf2dfsdq7je4al7z6ye5e8s2pt2smzu">bc1q46kpmd3pf2dfsdq7je4al7z6ye5e8s2pt2smzu</a> or <a href="">donate with ⚡</a>
         </div>
         <div class="footer-right">
-            @symphonicc on discord or <a href="http://bitcointech.help">join the bitcointech.help server</a>
+            contact - @symphonicc on discord or <a href="http://bitcointech.help">join the bitcointech.help server</a>
         </div>
     </div>
 </body>
