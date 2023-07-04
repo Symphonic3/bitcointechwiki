@@ -94,10 +94,6 @@
 	    border-bottom: none;
         }
         
-        .tab-content h2 {
-
-        }
-        
         .tab-title-container {
             text-align: center;
             background-color: #f1f1f1;
@@ -123,18 +119,48 @@
             width: 24px;
             margin-right: 10px;
         }
+        .tab-content h2 {
+	    cursor: pointer;
+        }
+         @keyframes flash {
+            50% {
+               background-color: #cadefc;
+            }
+         }
+	    .flash {
+	        animation-name: flash;
+	        animation-duration: 0.7s;
+	        animation-fill-mode: both;
+	    }
     </style>
     <script>
-        function openTab(tabName) {
+    
+    Element.prototype.getElementsByName = function (arg) {
+    var returnList = [];
+    (function BuildReturn(startPoint) {
+        for (var child in startPoint) {
+            if (startPoint[child].nodeType != 1) continue; //not an element
+            if (startPoint[child].getAttribute("name") == arg) returnList.push(startPoint[child]);
+            if (startPoint[child].childNodes.length > 0) {
+                BuildReturn(startPoint[child].childNodes);
+            }
+        }
+    })(this.childNodes);
+    return returnList;
+};
+    
+    var currentTab = "learn";
+    
+        function openTab(tabName, replace = true) {
             // Hide all tabs
-            var tabs = document.getElementsByClassName("tab-content");
-            for (var i = 0; i < tabs.length; i++) {
+            let tabs = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabs.length; i++) {
                 tabs[i].style.display = "none";
             }
             
             // Remove the active class from all tab titles
-            var tabTitles = document.getElementsByClassName("tab-title");
-            for (var i = 0; i < tabTitles.length; i++) {
+            let tabTitles = document.getElementsByClassName("tab-title");
+            for (let i = 0; i < tabTitles.length; i++) {
                 tabTitles[i].classList.remove("active");
             }
             
@@ -142,19 +168,59 @@
             document.getElementById(tabName).style.display = "block";
             document.getElementById(tabName + "-title").classList.add("active");
             
-            // Update the URL or add a hash based on the active tab
-            var url = window.location.href;
+            if (replace) {
+                            // Update the URL or add a hash based on the active tab
+            let url = window.location.href;
             if (url.includes("#")) {
                 url = url.substring(0, url.indexOf("#"));
+
             }
-            window.history.replaceState(null, null, url + "#" + tabName);
+                window.history.replaceState(null, null, url + "#" + tabName);
+                
+            }
+            currentTab = tabName;
+            return tabName;
         }
         
 	function checkHash() {
                 // Check if there is a hash in the URL and open the corresponding tab
-        	var hash = window.location.hash.substring(1);
+        	let h2s = document.getElementsByTagName('h2');
+            for(let i = 0, length = h2s.length; i < length; i++){
+                let ch2 = h2s[i];
+                // Do something with
+                let hdngn = ch2.innerHTML.replace(/[^a-zA-Z ]/g, "").replaceAll(" ", "-");
+                    hdngn = hdngn.toLowerCase();
+                    ch2.setAttribute("name", hdngn);
+                ch2.onclick = function() {
+                    let url = window.location.href;
+                    if (url.includes("#")) {
+                        url = url.substring(0, url.indexOf("#"));
+                    }
+                    let urlg = url + "#" + currentTab + "/" + hdngn;
+                    window.history.replaceState(null, null, urlg);
+                    ch2.addEventListener("animationend", () => {ch2.classList.remove("flash");});
+                    ch2.classList.add("flash");
+		    ch2.scrollIntoView();
+		    navigator.clipboard.writeText(urlg);
+                };
+            }
+            let hash = window.location.hash.substring(1);
         	if (hash) {
-            		openTab(hash);
+		        if (hash.includes("/")) {
+			        let subhash = hash.substring(hash.indexOf("/")+1);
+			        hash = hash.substring(0, hash.indexOf("/"));
+			        let secn = openTab(hash, false);
+			        let sec = document.getElementById(secn);
+			        let shea = sec.querySelector("[name='" + subhash + "']");
+			        let oric = shea.className;
+			        shea.addEventListener("animationend", () => {shea.classList.remove("flash");});
+                    		shea.classList.add("flash");
+				shea.scrollIntoView();
+			    } else {
+			     
+			        openTab(hash, false);   
+			        
+			    }
         	}
 	}
 
