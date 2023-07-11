@@ -214,11 +214,20 @@
 			        hash = hash.substring(0, hash.indexOf("/"));
 			        let secn = openTab(hash, false);
 			        let sec = document.getElementById(secn);
-			        let shea = sec.querySelector("[name='" + subhash + "']");
+			        let shea;
+					for(let i = 0, length = h2s.length; i < length; i++){
+					
+						if (h2s[i].getAttribute("name") == subhash) shea = h2s[i];
+					
+					}
+					
 			        let oric = shea.className;
 			        shea.addEventListener("animationend", () => {shea.classList.remove("flash");});
-                    		shea.classList.add("flash");
-				shea.scrollIntoView();
+                    shea.classList.add("flash");
+					//alert(shea.offsetTop);
+					setTimeout(function(){
+						shea.scrollIntoView();
+					},20);
 			    } else {
 			     
 			        openTab(hash, false);   
@@ -261,7 +270,7 @@
 			
 			
 			
-			<p> Maybe you’re unconvinced: I was too the first time I heard these claims — and the picture that popular media paints doesn’t help. A significant majority of the popular representation of bitcoin conflates it with the “cryptocurrency” space: a significant harm to the bitcoin ecosystem which piggybacks on bitcoin’s publicity while throwing out all of its values, with “projects” and “tokens” ranging from corporate scrip of dubious security at best, and genuine, outright scams at worst. See [shitcoins](shitcoins] for more on that topic. </p>
+			<p> Maybe you’re unconvinced: I was too the first time I heard these claims — and the picture that popular media paints doesn’t help. A significant majority of the popular representation of bitcoin conflates it with the “cryptocurrency” space: a significant harm to the bitcoin ecosystem which piggybacks on bitcoin’s publicity while throwing out all of its values, with “projects” and “tokens” ranging from corporate scrip of dubious security at best, and genuine, outright scams at worst. See <a href="#learn/shitcoins">shitcoins</a> for more on that topic. </p>
 
 
 
@@ -293,7 +302,7 @@
 
 
 
-			<p> When you open a bitcoin client on your computer, no central server is contacted — no entity is trusted to reflect an accurate log of balances or transactions. Instead transactions and other data is fetched from a peer-to-peer network — more on this later — which is not trusted, instead transactions are protected by two important concepts, digital signatures and proof of work. </p>
+			<p> When you open a bitcoin client on your computer, no central server is contacted — no entity is trusted to reflect an accurate log of balances or transactions. Instead transactions and other data is fetched from a peer-to-peer network — <a href="#learn/bitcoin-clients">more on this later</a> — which is not trusted, instead transactions are protected by two important concepts, digital signatures and proof of work. </p>
 
 
 
