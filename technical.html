@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bitcoin Tech Wiki</title>
+    <meta property="og:title" content="Bitcoin Tech Wiki" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://bitcointech.wiki" />
+    <meta property="og:image" content="https://bitcointech.wiki/Bitcoin.png" />
+    <meta property="og:description" content="Bitcoin information for beginners, technical specs, tools, & more" />
+    <meta name="theme-color" content="#f79413">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .footer {
+            background-color: #f1f1f1;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+	    border: 1px solid #ddd;
+	    border-left: none;
+            border-right: none;
+        }
+        
+        .footer-left {
+            flex: 1;
+            text-align: left;
+        }
+        
+        .footer-middle {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .footer-right {
+            flex: 1;
+            text-align: right;
+        }
+        
+        .stylized-text {
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .stylized-text:hover {
+            color: #f79413;
+            text-shadow: 0px 5px rgba(255, 255, 255, 1);
+        }
+        
+        .bitcointech-text {
+            font-family: "Arial Black", sans-serif;
+        }
+        
+        /* Styles for the tabbed pages */
+        .tab-container {
+        }
+        
+        .tab-titles {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 0;
+        }
+        
+        .tab-title {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            cursor: pointer;
+        }
+        
+        .tab-title.active {
+            background-color: #fff;
+        }
+        
+        .tab-content {
+            padding: 10px 0px 10px 0px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+        }
+		
+		.tab-content h2 {
+			margin-bottom: 30px;
+			margin-top: 30px;
+		
+		}
+		
+		.tab-content * {
+			
+			margin: 25px auto;
+			width: 95%;
+			max-width: 1300px;
+		
+		}
+        
+        .tab-title,
+        .tab-content {
+            box-sizing: border-box;
+	    border-bottom: none;
+        }
+        
+        .tab-title-container {
+            text-align: center;
+            background-color: #f1f1f1;
+            padding: 0px;
+            margin-bottom: 0px;
+        }
+        
+        .page-title {
+            background-color: #f1f1f1;
+            padding: 10px;
+            text-align: center;
+            margin: 0;
+        }
+        
+        .title-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .title-image {
+            height: 24px;
+            width: 24px;
+            margin-right: 10px;
+        }
+        .tab-content h2 {
+			cursor: pointer;
+        }
+		.tab-content p, ul li {
+			font-size: 20px;
+        }
+         @keyframes flash {
+            50% {
+               background-color: #cadefc;
+            }
+         }
+	    .flash {
+	        animation-name: flash;
+	        animation-duration: 0.7s;
+	        animation-fill-mode: both;
+	    }
+    </style>
+    <script>
+    
+    Element.prototype.getElementsByName = function (arg) {
+    var returnList = [];
+    (function BuildReturn(startPoint) {
+        for (var child in startPoint) {
+            if (startPoint[child].nodeType != 1) continue; //not an element
+            if (startPoint[child].getAttribute("name") == arg) returnList.push(startPoint[child]);
+            if (startPoint[child].childNodes.length > 0) {
+                BuildReturn(startPoint[child].childNodes);
+            }
+        }
+    })(this.childNodes);
+    return returnList;
+};
+        
+	function onload() {
+        	let h2s = document.getElementsByTagName('h2');
+            for(let i = 0, length = h2s.length; i < length; i++){
+                let ch2 = h2s[i];
+                // Do something with
+                let hdngn = ch2.innerHTML.replace(/[^a-zA-Z ]/g, "").replaceAll(" ", "-");
+                    hdngn = hdngn.toLowerCase();
+                    ch2.setAttribute("name", hdngn);
+                ch2.onclick = function() {
+                    let url = window.location.href;
+                    if (url.includes("#")) {
+                        url = url.substring(0, url.indexOf("#"));
+                    }
+                    let urlg = url + "#" + hdngn;
+                    window.history.replaceState(null, null, urlg);
+                    ch2.addEventListener("animationend", () => {ch2.classList.remove("flash");});
+                    ch2.classList.add("flash");
+		    ch2.scrollIntoView();
+		    navigator.clipboard.writeText(urlg);
+                };
+            }
+			let hash = window.location.hash.substring(1);
+        	if (hash) {
+				let shea;
+				for(let i = 0, length = h2s.length; i < length; i++){
+				
+					if (h2s[i].getAttribute("name") == hash) shea = h2s[i];
+				
+				}
+				
+				let oric = shea.className;
+				shea.addEventListener("animationend", () => {shea.classList.remove("flash");});
+				shea.classList.add("flash");
+				//alert(shea.offsetTop);
+				setTimeout(function(){
+					shea.scrollIntoView();
+				},20);
+        	}
+	}
+
+    </script>
+</head>
+<body onload="onload()">
+    <div class="page-title">
+        <h1 class="stylized-text" onclick="location.href='http://bitcointech.wiki'">
+            <div class="title-wrapper">
+                <img src="https://bitcointech.wiki/Bitcoin.svg" alt="Bitcoin Logo" class="title-image">
+                <span class="bitcointech-text">bitcointech.wiki</span>
+            </div>
+        </h1>
+    </div>
+    
+    <div class="tab-container">
+        <div class="tab-title-container">
+            <div class="tab-titles">
+                <a href="index.html"><div class="tab-title" id="learn-title">Learn</div></a>
+                <a href="technical.html"><div class="tab-title active" id="technical-title">Technical</div></a>
+                <a href="editor.html"><div class="tab-title" id="editor-title">Transaction Editor</div></a>
+            </div>
+        </div>
+        
+        <div class="tab-content" id="technical">
+            <h2>advanced info, technical docs, etc.</h2>
+            <p>Coming soon!</p>
+        </div>
+
+    </div>
+    
+    <div class="footer">
+        <div class="footer-left">
+            Made with ❤️ by Symphonic
+        </div>
+        <div class="footer-middle">
+            donate - onchain <a href="bitcoin:bc1q46kpmd3pf2dfsdq7je4al7z6ye5e8s2pt2smzu">bc1q46kpmd3pf2dfsdq7je4al7z6ye5e8s2pt2smzu</a> or <a href="">donate with ⚡</a>
+        </div>
+        <div class="footer-right">
+            contact - @symphonicc on discord or <a href="http://bitcointech.help">join the bitcointech.help server</a>
+        </div>
+    </div>
+</body>
+</html>
