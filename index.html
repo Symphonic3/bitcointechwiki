@@ -149,6 +149,14 @@
 	        animation-duration: 0.7s;
 	        animation-fill-mode: both;
 	    }
+		
+		.center {
+		  display: block;
+		  margin-left: auto;
+		  margin-right: auto;
+		  width: 50%;
+		}
+		
     </style>
     <script>
     
@@ -248,8 +256,10 @@
 			</ul>
 
 			<p>Maybe you’re unconvinced: I was too the first time I heard these claims — and the picture that popular media paints doesn’t help. A significant majority of the popular representation of bitcoin conflates it with the “cryptocurrency” space: a significant harm to the bitcoin ecosystem which piggybacks on bitcoin’s publicity while throwing out all of its values, with “projects” and “tokens” ranging from corporate scrip of dubious security at best, and genuine, outright scams at worst. See <a href="#learn/shitcoins">shitcoins</a> for more on that topic.</p>
-
+			
 			<p>In addition, a study by the Bank of Canada has shown that roughly 57% of canadian bitcoin owners see it primarily as an investment vehicle, compared to the 16%, 15%, and 12% that use it because of lack of trust in banks in the government, interest in new technology, and it’s use as a payment method, respectively.</p>
+			
+			<img class="center" src="BoC_motivation.png"/>
 
 			<p>In this introduction to bitcoin, I will explain how bitcoin actually does do what it claims to do, and how you can get started participating in the bitcoin ecosystem yourself.</p>
 
@@ -261,11 +271,11 @@
 
 			<p>When you go to log onto your online banking terminal, your computer contacts a server that is run by the bank. The bank’s server stores all of the information regarding your account and balance in their database, and sends it to your computer upon request. However, this means that the bank is entirely in control of your money: freezing, limiting, or taking it is as simple as modifying some numbers “on their end”. Banks can and do often make it difficult to withdraw all of your money, or charge exorbitant fees for certain operations like sending money overseas. In addition, if these bank servers are poorly secured, which you have no control over, your funds could be at risk, and the system lacks any form of privacy as your account is tied to your real identity.</p>
 
-			<p>[bank arch. image]</p>
+			<img class="center" src="bankarch.png"/>
 
 			<p>When you open a bitcoin node/client on your computer, no central server is contacted — no entity is trusted to reflect an accurate log of balances or transactions. Instead transactions and other data is fetched from a peer-to-peer network — <a href="#learn/bitcoin-clients">more on this later</a> — which is not trusted, instead transactions are protected by two important concepts, digital signatures and proof of work.</p>
 
-			<p>[p2p arch. image]</p>
+			<img class="center" src="p2parch.png"/>
 
 			<p>Without relying on a central authority to validate transactions, it’s difficult to know that a transaction is authorized by whom it claims to orignate from— after all, anyone can *say* anything. This is where digital signatures come into play: If Alice wants to pay Bob a certain amount of bitcoins, she will mathematically create a digital signature for her transaction. Much like how pen and paper signatures are intended to function, digital signatures are assumed to be truly unforgeable because of the algorithms they use.</p>
 
