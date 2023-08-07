@@ -872,17 +872,25 @@ class UTXO {
 	}
 
 	getAddress() {
+		
+		if (this.scriptpubkey.startsWith("6a")) { //OP_RETURN
+			
+			return bitcoin.script.toASM(Buffer.from(this.scriptpubkey, 'hex'));
+			
+		} else {
+			
+			let raw = Buffer.from(this.scriptpubkey, 'hex');
 
-		let raw = Buffer.from(this.scriptpubkey, 'hex');
+			try {
 
-		try {
+				return bitcoin.address.fromOutputScript(raw, selchain.bnet);
 
-			return bitcoin.address.fromOutputScript(raw, selchain.bnet);
+			} catch (e) {
 
-		} catch (e) {
+				return "NONSTANDARD";
 
-			return "NONSTANDARD";
-
+			}
+			
 		}
 
 	}
@@ -1073,6 +1081,7 @@ function satsAsBitcoin(n) {
 
 function getAddressType(address) {
 	
+	if (address.startsWith("OP_RETURN ")) return "data";
 	if (address.length >= 26 && address.length <= 35 && selchain.p2pkhprefixes.includes(address.substring(0, 1))) return "p2pkh";
 	if (address.length >= 26 && address.length <= 35 && address.startsWith(selchain.p2shprefix)) return "p2sh";
 	if (address.length == 62 && address.startsWith(selchain.bech + "1q")) return "p2wsh";
