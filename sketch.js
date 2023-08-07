@@ -1,35 +1,37 @@
 Array.prototype.remove = function() {
 	let pn = false;
-    var what, a = arguments, L = a.length, ax;
-    while (L && this.length) {
-        what = a[--L];
-        while ((ax = this.indexOf(what)) !== -1) {
+	var what, a = arguments,
+		L = a.length,
+		ax;
+	while (L && this.length) {
+		what = a[--L];
+		while ((ax = this.indexOf(what)) !== -1) {
 			pn = true;
-            this.splice(ax, 1);
-        }
-    }
-    return pn;
+			this.splice(ax, 1);
+		}
+	}
+	return pn;
 };
 
 let uielements = [];
 
 class Point {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-  }
+	constructor(x, y) {
+		this.x = x;
+		this.y = y;
+	}
 }
 
 class Colors {
-	
+
 	constructor(normalcolor, lightcolor, darkcolor) {
-		
+
 		this.normalcolor = normalcolor;
 		this.lightcolor = lightcolor;
 		this.darkcolor = darkcolor;
-		
+
 	}
-	
+
 }
 
 let COLOR_PALETTE_GRAY;
@@ -38,12 +40,12 @@ let COLOR_PALETTE_GOLD;
 let COLOR_PALETTE_PURPLE;
 
 function preload() {
-	
+
 	COLOR_PALETTE_GRAY = new Colors(color(235, 235, 235), color(250, 250, 250), color(200, 200, 200));
 	COLOR_PALETTE_GREEN = new Colors(color(164, 235, 181), color(179, 255, 195), color(125, 179, 137));
 	COLOR_PALETTE_GOLD = new Colors(color(235, 203, 164), color(255, 220, 179), color(179, 154, 125));
 	COLOR_PALETTE_PURPLE = new Colors(color(164, 192, 235), color(179, 209, 255), color(125, 146, 179));
-	
+
 }
 
 const SATS_PER_COIN = 100000000; //ONE HUNDRED MILLION
@@ -52,124 +54,128 @@ const EMPTY_WITNESS_ITEM = "[EMPTY ITEM]";
 let canvasOrigin;
 let spawns = 0;
 let canvasSize;
+
 function canvasStepRatioX() {
-  return canvasSize.x / width;
+	return canvasSize.x / width;
 }
+
 function canvasStepRatioY() {
-  return canvasSize.y / height;
+	return canvasSize.y / height;
 }
 
 let canvas;
+
 function setup() {
-  bitcoin.initEccLib(secp256k1);
-  canvasSize = new Point(min(window.innerWidth*0.95, 1300), window.innerHeight*4/5);
-  canvasOrigin = new Point(-canvasSize.x/2, -canvasSize.y/2);
-  canvas = createCanvas(canvasSize.x, canvasSize.y);
-  /*uielements.push(
-    new InputOutputDisplayElement(new BoundingBox(new Point(-25, -270), 50, 50))
-  ); //TEST*/
-  let inp = new p5.Element(document.getElementById("loaderinput"));
-  function doInput() {
-	  let input = inp.value();
-	  inp.value(null);
-	  
-	  if (input.length == 64 && new RegExp("^[a-fA-F0-9]+$").test(input)) { //tx
-		
-		getTransactionFull(input).catch((error) => {
-			inp.elt.classList.add("error");
-		}).then((tx) => {
+	bitcoin.initEccLib(secp256k1);
+	canvasSize = new Point(min(window.innerWidth * 0.95, 1300), window.innerHeight * 4 / 5);
+	canvasOrigin = new Point(-canvasSize.x / 2, -canvasSize.y / 2);
+	canvas = createCanvas(canvasSize.x, canvasSize.y);
+	/*uielements.push(
+	  new InputOutputDisplayElement(new BoundingBox(new Point(-25, -270), 50, 50))
+	); //TEST*/
+	let inp = new p5.Element(document.getElementById("loaderinput"));
 
-			uielements.push(new TransactionDisplay(new Point(canvasOrigin.x + canvasSize.x/2 + (canvasSize.x/30*spawns), canvasOrigin.y + canvasSize.y/2 + (canvasSize.y/30*spawns++)), tx, MutabilityType.NONE));
-			
-		});
-		
-		
-	  } else if (input.length >= 66 && new RegExp("^[a-fA-F0-9]+$").test(input.substring(0, 64)) && input.substring(64, 65) == ":") { //utxo
+	function doInput() {
+		let input = inp.value();
+		inp.value(null);
 
-		getUtxo(input.substring(0, 64), input.substring(65, input.length)).catch((error) => {
-			inp.elt.classList.add("error");
-		}).then((utxo) => {
+		if (input.length == 64 && new RegExp("^[a-fA-F0-9]+$").test(input)) { //tx
 
-			uielements.push(new UTXODisplay(new Point(canvasOrigin.x + canvasSize.x/2 + (canvasSize.x/30*spawns), canvasOrigin.y + canvasSize.y/2) + (canvasSize.y/30*spawns++), utxo, utxo.status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY));
-			
-		});
-		  
-	  } else { //assumed to be an address		  
-		  //inp.elt.classList.add("error");
-		  
-		let utxos = getAddressUtxos(input).catch((error) => {
-			inp.elt.classList.add("error");
-		}).then((utxos) => {
-			
-			let n = utxos.length;
-			
-			let sy = (canvasOrigin.y + canvasSize.y/2);
-		
-			for (let i = 0; i < n; i++) {
-				
-				let utxo = utxos[i];
-				
-				uielements.push(
-					new UTXODisplay(
-						new Point(
-							canvasOrigin.x + canvasSize.x/2 + (canvasSize.x/30*spawns),
-							(sy - (n/2)*150) + (i*150) + 30 + (canvasSize.y/30*spawns)
-						),
-						utxo,
-						utxo.status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY
-					)
-				);
-				
-			}
-			
-			spawns++;
-			
-		});
-		
-	  }
-  }
-  inp.elt.addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') {
-      doInput();
-    }
-  });
-    let addbutton = new p5.Element(document.getElementById("addbtn"));
-  addbutton.mouseClicked(function () {
-    doInput();
-  });
-  let emptytxbutton = new p5.Element(document.getElementById("addemptytx"));
-  emptytxbutton.mouseClicked(function () {
-	let tx = new Transaction([], [], 2, 0, -1);
-	let txd = new TransactionDisplay(
-		new Point(canvasOrigin.x + canvasSize.x/2 + (canvasSize.x/30*spawns), canvasOrigin.y + canvasSize.y/2 + (canvasSize.y/30*spawns++)),
-		tx,
-		MutabilityType.ALL
-	);
-	uielements.push(txd);
-  });
-  
-    let utxoaddressbutton = new p5.Element(document.getElementById("addutxoaddress"));
-  utxoaddressbutton.mouseClicked(function () {
-	let utx = new UTXO("", 0, -2, null, null, null, new UTXOFullData(), null, null, false, false);
-	utx.scriptpubkey = bitcoin.address.toOutputScript(prompt("Enter address:")).toString("hex");
-	let utxd = new UTXODisplay(
-		new Point(canvasOrigin.x + canvasSize.x/2 + (canvasSize.x/30*spawns), canvasOrigin.y + canvasSize.y/2 + (canvasSize.y/30*spawns++)),
-		utx,
-		MutabilityType.ALL
-	);
-	uielements.push(utxd);
-  });
-  
-    let emptyutxobutton = new p5.Element(document.getElementById("addemptyutxo"));
-  emptyutxobutton.mouseClicked(function () {
-	let utx = new UTXO("", 0, -2, null, null, null, new UTXOFullData(), null, null, false, false);
-	let utxd = new UTXODisplay(
-		new Point(canvasOrigin.x + canvasSize.x/2 + (canvasSize.x/30*spawns), canvasOrigin.y + canvasSize.y/2 + (canvasSize.y/30*spawns++)),
-		utx,
-		MutabilityType.ALL
-	);
-	uielements.push(utxd);
-  });
+			getTransactionFull(input).catch((error) => {
+				inp.elt.classList.add("error");
+			}).then((tx) => {
+
+				uielements.push(new TransactionDisplay(new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)), tx, MutabilityType.NONE));
+
+			});
+
+
+		} else if (input.length >= 66 && new RegExp("^[a-fA-F0-9]+$").test(input.substring(0, 64)) && input.substring(64, 65) == ":") { //utxo
+
+			getUtxo(input.substring(0, 64), input.substring(65, input.length)).catch((error) => {
+				inp.elt.classList.add("error");
+			}).then((utxo) => {
+
+				uielements.push(new UTXODisplay(new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2) + (canvasSize.y / 30 * spawns++), utxo, utxo.status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY));
+
+			});
+
+		} else { //assumed to be an address		  
+			//inp.elt.classList.add("error");
+
+			let utxos = getAddressUtxos(input).catch((error) => {
+				inp.elt.classList.add("error");
+			}).then((utxos) => {
+
+				let n = utxos.length;
+
+				let sy = (canvasOrigin.y + canvasSize.y / 2);
+
+				for (let i = 0; i < n; i++) {
+
+					let utxo = utxos[i];
+
+					uielements.push(
+						new UTXODisplay(
+							new Point(
+								canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns),
+								(sy - (n / 2) * 150) + (i * 150) + 30 + (canvasSize.y / 30 * spawns)
+							),
+							utxo,
+							utxo.status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY
+						)
+					);
+
+				}
+
+				spawns++;
+
+			});
+
+		}
+	}
+	inp.elt.addEventListener('keypress', function(e) {
+		if (e.key === 'Enter') {
+			doInput();
+		}
+	});
+	let addbutton = new p5.Element(document.getElementById("addbtn"));
+	addbutton.mouseClicked(function() {
+		doInput();
+	});
+	let emptytxbutton = new p5.Element(document.getElementById("addemptytx"));
+	emptytxbutton.mouseClicked(function() {
+		let tx = new Transaction([], [], 2, 0, -1);
+		let txd = new TransactionDisplay(
+			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
+			tx,
+			MutabilityType.ALL
+		);
+		uielements.push(txd);
+	});
+
+	let utxoaddressbutton = new p5.Element(document.getElementById("addutxoaddress"));
+	utxoaddressbutton.mouseClicked(function() {
+		let utx = new UTXO("", 0, -2, null, null, null, new UTXOFullData(), null, null, false, false);
+		utx.scriptpubkey = bitcoin.address.toOutputScript(prompt("Enter address:")).toString("hex");
+		let utxd = new UTXODisplay(
+			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
+			utx,
+			MutabilityType.ALL
+		);
+		uielements.push(utxd);
+	});
+
+	let emptyutxobutton = new p5.Element(document.getElementById("addemptyutxo"));
+	emptyutxobutton.mouseClicked(function() {
+		let utx = new UTXO("", 0, -2, null, null, null, new UTXOFullData(), null, null, false, false);
+		let utxd = new UTXODisplay(
+			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
+			utx,
+			MutabilityType.ALL
+		);
+		uielements.push(utxd);
+	});
 }
 
 //
@@ -191,74 +197,76 @@ let mouseInBounds = false;
 
 let _ncursor = null;
 let _ntitle = null;
+
 function setCursor(cur) {
 
 	_ncursor = cur;
 	_cursorSetFrame = _ncursor != null;
-	
+
 }
+
 function setTitle(title) {
-	
+
 	_ntitle = title;
 	_titleSetFrame = _ntitle != null;
-	
+
 }
 
 function clearTable() {
-	
+
 	let table = document.getElementById("dataTable");
 	table.innerHTML = "";
-	
+
 }
 
 function insertTableRow(key, value) {
-	
+
 	return insertTableRowEV(key, textAsElement(value));
-	
+
 }
 
 function insertTableRowEV(key, value) {
-	
+
 	let row = document.getElementById("dataTable").insertRow();
 	row.insertCell(0).innerHTML = key;
 	let c = row.insertCell(1);
 	c.appendChild(value);
 	return c;
-	
+
 }
 
 let btnHover = false;
 
 function draw() {
 	mouseInBounds = (mouseX > 0 && mouseY > 0 && mouseX < width && mouseY < height);
-	
+
 	if (mouseInBounds) {
-		
+
 		mouseClickedThisFrame = (!pMouseIsPressed && mouseIsPressed);
 		mouseDroppedThisFrame = (pMouseIsPressed && !mouseIsPressed);
-		
+
 	} else {
-		
+
 		mouseClickedThisFrame = false;
 		mouseDroppedThisFrame = pMouseIsPressed;
-		
+
 	}
-  _cursorSetFrame = false;
-  _titleSetFrame = false;
-  if (mouseClickedThisFrame) {
-	  mouseClickedX = mouseX;
-	  mouseClickedY = mouseY;
-  }
-  //utility ^
+	_cursorSetFrame = false;
+	_titleSetFrame = false;
+	if (mouseClickedThisFrame) {
+		mouseClickedX = mouseX;
+		mouseClickedY = mouseY;
+	}
+	//utility ^
 
-  background(241);
+	background(241);
 
-  let n = width / 20;
-  let nr = n*1.3;
-  let pi = new Point(width - n, height - n);
+	let n = width / 20;
+	let nr = n * 1.3;
+	let pi = new Point(width - n, height - n);
 
 	if (!mouseIsPressed || mouseClickedThisFrame) {
-		
+
 		/*//determine plus button
 		if ( ( ((mouseX-pi.x)**2) + ((mouseY-pi.y)**2) ) < (nr/2)**2) {
 			btnHover = true;
@@ -267,87 +275,87 @@ function draw() {
 		hoverElement = null;
 		if (drag != null && mouseDroppedThisFrame) drag.drop();
 		drag = null;
-		
+
 		if (mouseInBounds) {
 			if (!btnHover && !drag) {
-				let mCart = realToCart(new Point(mouseX, mouseY));		
-				for (let i = uielements.length-1; i >= 0; i--) {
+				let mCart = realToCart(new Point(mouseX, mouseY));
+				for (let i = uielements.length - 1; i >= 0; i--) {
 					let celement = uielements[i];
 					if (celement.test(mCart)) {
-					  hoverElement = celement;
-					  if (mouseIsPressed) {						  
-						  uielements.remove(celement);
-						  uielements.push(celement);
-					  }
-					  break;
+						hoverElement = celement;
+						if (mouseIsPressed) {
+							uielements.remove(celement);
+							uielements.push(celement);
+						}
+						break;
 					}
 				}
 			}
 		}
-	  
+
 	}
-	
-  if (mouseInBounds && mouseIsPressed && !btnHover && !drag) {
-      let deltaX = mouseX - pmouseX;
-      let deltaY = mouseY - pmouseY;
 
-      if (hoverElement == null) {
-        canvasOrigin.x -= deltaX * canvasStepRatioX();
-        canvasOrigin.y -= deltaY * canvasStepRatioY();
+	if (mouseInBounds && mouseIsPressed && !btnHover && !drag) {
+		let deltaX = mouseX - pmouseX;
+		let deltaY = mouseY - pmouseY;
+
+		if (hoverElement == null) {
+			canvasOrigin.x -= deltaX * canvasStepRatioX();
+			canvasOrigin.y -= deltaY * canvasStepRatioY();
+			spawns = 0;
+		}
+
+	}
+
+	if (
+		wheelDelta != 0 &&
+		!(canvasSize.x + wheelDelta <= 0 || canvasSize.y + wheelDelta <= 0)
+	) {
+		//account for aspect ratio of canvas
+		let aspect = canvasSize.y / canvasSize.x;
+		let nCenter = realToCart(new Point(mouseX, mouseY));
+		let deltaA = ((sqrt((canvasSize.x + canvasSize.y) / 2) + wheelDelta / 25) ** 2 - (canvasSize.x + canvasSize.y) / 2);
+		canvasSize.x += deltaA;
+		canvasSize.y += deltaA * aspect;
+		let newM = realToCart(new Point(mouseX, mouseY));
+		canvasOrigin.x += nCenter.x - newM.x;
+		canvasOrigin.y += nCenter.y - newM.y;
 		spawns = 0;
-      }
-	  
-  }
+	}
 
-  if (
-    wheelDelta != 0 &&
-    !(canvasSize.x + wheelDelta <= 0 || canvasSize.y + wheelDelta <= 0)
-  ) {
-	//account for aspect ratio of canvas
-	let aspect = canvasSize.y/canvasSize.x;
-    let nCenter = realToCart(new Point(mouseX, mouseY));
-	let deltaA = ((sqrt((canvasSize.x + canvasSize.y)/2) + wheelDelta/25)**2 - (canvasSize.x + canvasSize.y)/2);
-    canvasSize.x += deltaA;
-    canvasSize.y += deltaA*aspect;
-    let newM = realToCart(new Point(mouseX, mouseY));
-    canvasOrigin.x += nCenter.x - newM.x;
-    canvasOrigin.y += nCenter.y - newM.y;
-	spawns = 0;
-  }
-  
-  if (mouseDroppedThisFrame) {
-	  
-	  if (mouseX == mouseClickedX && mouseY == mouseClickedY && !loadingSelection) {
-		  //select ui items
-		  let nselectedItem;
-		  if (hoverElement == null) {
-			  
-			  nselectedItem = null;
-			  
-		  } else {
-			  
-			  nselectedItem = hoverElement;
-			  
-		  }
-		  
-		  if (selectedItem != nselectedItem) {
-			  
-			selectedItem = nselectedItem;
-			clearTable();
-			
-			if (selectedItem != null) {
-				
-				insertTableRow("Loading...", "...");
-				selectedItem.onFocused();
-				
+	if (mouseDroppedThisFrame) {
+
+		if (mouseX == mouseClickedX && mouseY == mouseClickedY && !loadingSelection) {
+			//select ui items
+			let nselectedItem;
+			if (hoverElement == null) {
+
+				nselectedItem = null;
+
+			} else {
+
+				nselectedItem = hoverElement;
+
 			}
-			  
-		  }
-		  
-	  }
-	  
-  }
-  /*if (btnHover){
+
+			if (selectedItem != nselectedItem) {
+
+				selectedItem = nselectedItem;
+				clearTable();
+
+				if (selectedItem != null) {
+
+					insertTableRow("Loading...", "...");
+					selectedItem.onFocused();
+
+				}
+
+			}
+
+		}
+
+	}
+	/*if (btnHover){
 	  
 	setCursor("pointer");
 	setTitle("Add...");
@@ -366,80 +374,81 @@ function draw() {
   fill(67,136,214);
   rect(pi.x - nr/4, pi.y - nr/16, nr/2, nr/8);
   rect(pi.x - nr/16, pi.y - nr/4, nr/8, nr/2);*/
-  
-  fill(225);
-  strokeWeight(0);
-  textSize(200/canvasStepRatioX());
-  textAlign(CENTER, CENTER);
-  let pp = cartToReal(new Point(0,0));
-  text("\u20bf", pp.x, pp.y);
 
-  //use a seperate layer for this bezier line drawing and do it in a different place?
-  for (let i = 0; i < uielements.length; i++) {
-	  let celement = uielements[i];
-	  inner: for (let j = 0; j < celement.leftPlugs.length; j++) { //arbitrary but will always cover everything exactly once
-		  
+	fill(225);
+	strokeWeight(0);
+	textSize(200 / canvasStepRatioX());
+	textAlign(CENTER, CENTER);
+	let pp = cartToReal(new Point(0, 0));
+	text("\u20bf", pp.x, pp.y);
+
+	//use a seperate layer for this bezier line drawing and do it in a different place?
+	for (let i = 0; i < uielements.length; i++) {
+		let celement = uielements[i];
+		inner: for (let j = 0; j < celement.leftPlugs.length; j++) { //arbitrary but will always cover everything exactly once
+
 			let ctnc = celement.leftPlugs[j];
 			if (!ctnc.fullyConnected()) continue inner;
-			
+
 			let o = ctnc.right;
 			let vPos = new BoundingBox(
 				new Point(
 					o.getBounds().pos.x,
-					o.getBounds().pos.y + o.topOffset + o.rowHeight*j + (o.rowMargin*j)
+					o.getBounds().pos.y + o.topOffset + o.rowHeight * j + (o.rowMargin * j)
 				),
 				o.rowWidth,
 				o.rowHeight
 			);
 			let doP = cartToReal(vPos.pos);
 
-			let thisCenX = doP.x + (vPos.width / canvasStepRatioX())/2;
-			thisCenX += -(vPos.width / canvasStepRatioX())/2;
-			let thisCenY = doP.y + (vPos.height / canvasStepRatioY())/2;
+			let thisCenX = doP.x + (vPos.width / canvasStepRatioX()) / 2;
+			thisCenX += -(vPos.width / canvasStepRatioX()) / 2;
+			let thisCenY = doP.y + (vPos.height / canvasStepRatioY()) / 2;
 
 			let o2 = ctnc.left;
 			let vPos2 = new BoundingBox(
 				new Point(
-					o2.getBounds().pos.x + (o2.getBounds().width-o2.rowWidth),
-					o2.getBounds().pos.y + o2.topOffset + o2.rowHeight*o2.rightPlugs.indexOf(ctnc) + (o2.rowMargin*o2.rightPlugs.indexOf(ctnc))
+					o2.getBounds().pos.x + (o2.getBounds().width - o2.rowWidth),
+					o2.getBounds().pos.y + o2.topOffset + o2.rowHeight * o2.rightPlugs.indexOf(ctnc) + (o2.rowMargin * o2.rightPlugs.indexOf(ctnc))
 				),
 				o2.rowWidth,
 				o2.rowHeight
 			);
 			let doP2 = cartToReal(vPos2.pos);
 
-			let thatCenX = doP2.x + (vPos2.width / canvasStepRatioX())/2;
-			thatCenX += (vPos2.width / canvasStepRatioX())/2;
-			let thatCenY = doP2.y + (vPos2.height / canvasStepRatioY())/2;
-			
+			let thatCenX = doP2.x + (vPos2.width / canvasStepRatioX()) / 2;
+			thatCenX += (vPos2.width / canvasStepRatioX()) / 2;
+			let thatCenY = doP2.y + (vPos2.height / canvasStepRatioY()) / 2;
+
 			drawBezier(thisCenX, thisCenY, thatCenX, thatCenY);
-		  
-	  }
-	  
-  }
 
-  for (let i = 0; i < uielements.length; i++) {
-    let celement = uielements[i];
-    celement.render();
-  }
+		}
 
-  if (drag != null) {
-	  
-	  setCursor("grabbing");
-	  drag.drag();
-	  
-  }
+	}
 
-  //utility
+	for (let i = 0; i < uielements.length; i++) {
+		let celement = uielements[i];
+		celement.render();
+	}
 
-  if (!_cursorSetFrame) setCursor(mouseIsPressed ? "grabbing" : "move");
-  if (!_titleSetFrame) setTitle(null);
+	if (drag != null) {
 
-  cursor(_ncursor == null ? "auto" : _ncursor);
-  if (_ntitle == null) canvas.elt.removeAttribute("title"); else canvas.elt.title = _ntitle;
+		setCursor("grabbing");
+		drag.drag();
 
-  pMouseIsPressed = mouseIsPressed;
-  wheelDelta = 0;
+	}
+
+	//utility
+
+	if (!_cursorSetFrame) setCursor(mouseIsPressed ? "grabbing" : "move");
+	if (!_titleSetFrame) setTitle(null);
+
+	cursor(_ncursor == null ? "auto" : _ncursor);
+	if (_ntitle == null) canvas.elt.removeAttribute("title");
+	else canvas.elt.title = _ntitle;
+
+	pMouseIsPressed = mouseIsPressed;
+	wheelDelta = 0;
 }
 
 //
@@ -447,52 +456,52 @@ function draw() {
 //
 
 function drawPlug(x, y, width, height, side, withPlus) {
-	
+
 	if (side == ButtonSide.LEFT) {
-		
+
 		beginShape();
 		vertex(x, y);
-		vertex(x + width*2/3, y);
-		vertex(x + width, y + height/2);
-		vertex(x + width*2/3, y + height);
+		vertex(x + width * 2 / 3, y);
+		vertex(x + width, y + height / 2);
+		vertex(x + width * 2 / 3, y + height);
 		vertex(x, y + height);
 		endShape(CLOSE);
-		
+
 	} else {
-		
+
 		beginShape();
 		vertex(x + width, y);
-		vertex(x + width/3, y);
-		vertex(x, y + height/2);
-		vertex(x + width/3, y + height);
+		vertex(x + width / 3, y);
+		vertex(x, y + height / 2);
+		vertex(x + width / 3, y + height);
 		vertex(x + width, y + height);
 		endShape(CLOSE);
-		
+
 	}
-	
+
 	if (withPlus) {
-		
+
 		//line(x1, y + height/4, x1 + width*0.5, y + height*3/4);
-		let x2 = x + width*(side ? 1/3 : 0) + width*1/8 + width*(side ? -0.1 : 0.1);
-		let w = width*0.4;
-		line(x2, y + height/2, x2 + w, y + height/2);
-		
-		let x3 = x2 + w/2;
-		line (x3, y + height/2 - w/2, x3, y + height/2 + w/2);
-		
+		let x2 = x + width * (side ? 1 / 3 : 0) + width * 1 / 8 + width * (side ? -0.1 : 0.1);
+		let w = width * 0.4;
+		line(x2, y + height / 2, x2 + w, y + height / 2);
+
+		let x3 = x2 + w / 2;
+		line(x3, y + height / 2 - w / 2, x3, y + height / 2 + w / 2);
+
 	}
-	
+
 }
 
 function drawBezier(thisCenX, thisCenY, thatCenX, thatCenY, opacity = 255) {
-	
-	strokeWeight(4/canvasStepRatioY());
+
+	strokeWeight(4 / canvasStepRatioY());
 	stroke(0, 0, 0, opacity);
 	noFill();
 	beginShape();
 	vertex(thisCenX, thisCenY);
 	vertex(thisCenX, thisCenY);
-	bezierVertex(thisCenX + (thatCenX - thisCenX)/2, thisCenY, thisCenX + (thatCenX - thisCenX)/2, thatCenY, thatCenX, thatCenY);
+	bezierVertex(thisCenX + (thatCenX - thisCenX) / 2, thisCenY, thisCenX + (thatCenX - thisCenX) / 2, thatCenY, thatCenX, thatCenY);
 	vertex(thatCenX, thatCenY)
 	endShape();
 
@@ -503,184 +512,197 @@ function drawBezier(thisCenX, thisCenY, thatCenX, thatCenY, opacity = 255) {
 //
 
 class Transaction {
-  
-  constructor(vin, vout, version, locktime, status) {
-    
-	this.inputs = vin; //UTXO []
-    this.outputs = vout; //UTXO []
-	this.version = version;
-	this.locktime = locktime;
 
-	this.status = status; //-1 for new, 0 for mempool unconfirmed, block height for in block
-    
-  }
-  
-  getBitcoin(rate = true) {
-	  
-	  let btx = new bitcoin.Transaction();
-	  btx.locktime = this.locktime;
-	  btx.version = this.version;
-	  for (let i = 0; i < this.inputs.length; i++) {
-		  
-		  let ss = undefined;
-		  
-		  try { btx.addInput(
-			  Buffer.from(this.inputs[i].getTXID(), 'hex').reverse(),
-			  this.inputs[i].getOutpoint(),
-			  this.inputs[i].fullData.sequence,
-			  ss
-		  ); } catch (e) { print(this.inputs[i]); }
-		  if (this.inputs[i].fullData.scriptsig) btx.setInputScript(i, Buffer.from(this.inputs[i].fullData.scriptsig, 'hex'));
-		  if (this.inputs[i].fullData.witness && this.inputs[i].fullData.witness.length > 0) btx.setWitness(i, this.inputs[i].fullData.witness.map(x => Buffer.from(x, 'hex')));
-		  
-	  }
-	  for (let i = 0; i < this.outputs.length; i++) {
-		  
-		  btx.addOutput(Buffer.from(this.outputs[i].scriptpubkey, 'hex'), rate ? this.outputs[i].getValue() : 0);
-		  
-	  }
-	  return btx;
-	  
-  }
-  
-  async getPsbt() {
-	  
-	  let btx = this.getBitcoin();
-	  let psbt = new bitcoin.Psbt();
-	  
-	  psbt.setVersion(this.version);
-	  psbt.setLocktime(this.locktime);
-	  
-	  for (let i = 0; i < btx.outs.length; i++) {
-		  
-		  psbt.addOutput(btx.outs[i]);
-		  
-	  }
-	  
-	  for (let i = 0; i < this.inputs.length; i++) {
-		  
-		  psbt.addInput({
-			  
-			  hash: this.inputs[i].getTXID(),
-			  index: this.inputs[i].getOutpoint()
-			  
-		  });
-		  psbt.setInputSequence(i, this.inputs[i].fullData.sequence);
-		  
-	  }
-	  
-	  for (let i = 0; i < this.inputs.length; i++) {
-		  
-		  let txe = (await this.inputs[i].getTransaction());
-		  if (txe.inputs.length != 0) {
-			  
-			  psbt.updateInput(i, {
-				  
-				  nonWitnessUtxo: txe.getBitcoin().toBuffer(),
-				  redeemScript: Buffer.from(this.inputs[i].scriptpubkey, 'hex')
-				  
-			  });
-			  if (this.inputs[i].fullData.scriptsig || (this.inputs[i].fullData.witness && this.inputs[i].fullData.witness.length > 0)) {
-				  
-				  let thiso = this;
-				  psbt.finalizeInput(i, function() {
-					  
-					  return {
-						  
-						  finalScriptSig: thiso.inputs[i].fullData.scriptsig ? Buffer.from(thiso.inputs[i].fullData.scriptsig, 'hex') : Buffer.from("", 'hex'),
-						  finalScriptWitness: (thiso.inputs[i].fullData.witness && thiso.inputs[i].fullData.witness.length > 0) ? bitcoin.Psbt.witnessStackToScriptWitness(thiso.inputs[i].fullData.witness.map(x => Buffer.from(x, 'hex'))) : undefined
-						  
-					  };
-					  
-				  });
+	constructor(vin, vout, version, locktime, status) {
 
-			  }
-			  
-		  }
-		  
-	  }
+		this.inputs = vin; //UTXO []
+		this.outputs = vout; //UTXO []
+		this.version = version;
+		this.locktime = locktime;
 
-	  return psbt;
-	  
-  }
-  
-  
-  getInAmt() {
-	let a = 0;
-	for (let i = 0; i < this.inputs.length; i++) { a += this.inputs[i].getValue(); }
-	return a;
-  }
-  
-  getOutAmt(ignore = null) {
-	let a = 0;
-	for (let i = 0; i < this.outputs.length; i++) { if (this.outputs[i] != ignore) a += this.outputs[i].getValue(); }
-	return a;
-  }
-  
+		this.status = status; //-1 for new, 0 for mempool unconfirmed, block height for in block
+
+	}
+
+	getBitcoin(rate = true) {
+
+		let btx = new bitcoin.Transaction();
+		btx.locktime = this.locktime;
+		btx.version = this.version;
+		for (let i = 0; i < this.inputs.length; i++) {
+
+			let ss = undefined;
+
+			try {
+				btx.addInput(
+					Buffer.from(this.inputs[i].getTXID(), 'hex').reverse(),
+					this.inputs[i].getOutpoint(),
+					this.inputs[i].fullData.sequence,
+					ss
+				);
+			} catch (e) {
+				print(this.inputs[i]);
+			}
+			if (this.inputs[i].fullData.scriptsig) btx.setInputScript(i, Buffer.from(this.inputs[i].fullData.scriptsig, 'hex'));
+			if (this.inputs[i].fullData.witness && this.inputs[i].fullData.witness.length > 0) btx.setWitness(i, this.inputs[i].fullData.witness.map(x => Buffer.from(x, 'hex')));
+
+		}
+		for (let i = 0; i < this.outputs.length; i++) {
+
+			btx.addOutput(Buffer.from(this.outputs[i].scriptpubkey, 'hex'), rate ? this.outputs[i].getValue() : 0);
+
+		}
+		return btx;
+
+	}
+
+	async getPsbt() {
+
+		let btx = this.getBitcoin();
+		let psbt = new bitcoin.Psbt();
+
+		psbt.setVersion(this.version);
+		psbt.setLocktime(this.locktime);
+
+		for (let i = 0; i < btx.outs.length; i++) {
+
+			psbt.addOutput(btx.outs[i]);
+
+		}
+
+		for (let i = 0; i < this.inputs.length; i++) {
+
+			psbt.addInput({
+
+				hash: this.inputs[i].getTXID(),
+				index: this.inputs[i].getOutpoint()
+
+			});
+			psbt.setInputSequence(i, this.inputs[i].fullData.sequence);
+
+		}
+
+		for (let i = 0; i < this.inputs.length; i++) {
+
+			let txe = (await this.inputs[i].getTransaction());
+			if (txe.inputs.length != 0) {
+
+				psbt.updateInput(i, {
+
+					nonWitnessUtxo: txe.getBitcoin().toBuffer(),
+					redeemScript: Buffer.from(this.inputs[i].scriptpubkey, 'hex')
+
+				});
+				if (this.inputs[i].fullData.scriptsig || (this.inputs[i].fullData.witness && this.inputs[i].fullData.witness.length > 0)) {
+
+					let thiso = this;
+					psbt.finalizeInput(i, function() {
+
+						return {
+
+							finalScriptSig: thiso.inputs[i].fullData.scriptsig ? Buffer.from(thiso.inputs[i].fullData.scriptsig, 'hex') : Buffer.from("", 'hex'),
+							finalScriptWitness: (thiso.inputs[i].fullData.witness && thiso.inputs[i].fullData.witness.length > 0) ? bitcoin.Psbt.witnessStackToScriptWitness(thiso.inputs[i].fullData.witness.map(x => Buffer.from(x, 'hex'))) : undefined
+
+						};
+
+					});
+
+				}
+
+			}
+
+		}
+
+		return psbt;
+
+	}
+
+
+	getInAmt() {
+		let a = 0;
+		for (let i = 0; i < this.inputs.length; i++) {
+			a += this.inputs[i].getValue();
+		}
+		return a;
+	}
+
+	getOutAmt(ignore = null) {
+		let a = 0;
+		for (let i = 0; i < this.outputs.length; i++) {
+			if (this.outputs[i] != ignore) a += this.outputs[i].getValue();
+		}
+		return a;
+	}
+
 }
 
 class UTXOFullData {
-	
+
 	constructor(scriptsig = "", sequence = 4294967293, witness = []) {
-		
+
 		this.scriptsig = scriptsig;
 		this.sequence = sequence;
 		this.witness = witness;
-		
+
 	}
-	
+
 	isRBFSelf() {
-			
+
 		return this.sequence < 4294967294;
-		
+
 	}
-	
+
 	isFlaggingDisableLocktimeSelf() {
-		
+
 		return this.sequence == 4294967295;
-		
+
 	}
-	
+
 }
 
 class UTXO {
-	
+
 	constructor(scriptpubkey, value, status, txid = null, outpoint = null, spendertxid = null, fullData = null, tx = null, spendertx = null, loadablespender = true, loadablecreator = true) {
-		
+
 		this.scriptpubkey = scriptpubkey; //hex
 		this.value = value;
-		
+
 		this.status = status; //-2 for new, -1 for spendable, 0 for mempool spent, block height for spent in block
-		
+
 		this.txid = txid;
 		this.outpoint = outpoint;
 		this.spendertxid = spendertxid;
-		
+
 		this.fullData = fullData;
-		
+
 		this.tx = null;
 		this.spendertx = null;
-		
+
 		this.spendertx = spendertx;
 		this.loadablespender = loadablespender;
 		this.loadablecreator = loadablecreator;
-		
+
 	}
-	
+
 	getTXID() {
-		if (this.tx) return this.tx.getBitcoin().getId(); else return this.txid;
+		if (this.tx) return this.tx.getBitcoin().getId();
+		else return this.txid;
 	}
-	
+
 	getOutpoint() {
-		if (this.outpoint != null) return this.outpoint; else if (this.tx) return this.tx.outputs.indexOf(this); else return -1;
+		if (this.outpoint != null) return this.outpoint;
+		else if (this.tx) return this.tx.outputs.indexOf(this);
+		else return -1;
 	}
-	
+
 	getSpenderTXID() {
-		if (this.spendertx) return this.spendertx.getBitcoin().getId(); else return this.spendertxid;
+		if (this.spendertx) return this.spendertx.getBitcoin().getId();
+		else return this.spendertxid;
 	}
-	
+
 	getValue() {
-		if (!this.remaindervalue) return this.value; else {
+		if (!this.remaindervalue) return this.value;
+		else {
 			if (this.remaindervalue) {
 				if (this.tx) {
 					let tx = this.tx;
@@ -690,7 +712,7 @@ class UTXO {
 						if (cf.value != undefined) {
 							nfee = cf.value;
 						} else if (cf.rate != undefined) {
-							nfee = cf.rate*(tx.getBitcoin(false).weight()/4)
+							nfee = cf.rate * (tx.getBitcoin(false).weight() / 4)
 						}
 						nfee = ceil(nfee);
 						let nothers = tx.getInAmt() - tx.getOutAmt(this);
@@ -705,61 +727,61 @@ class UTXO {
 			}
 		}
 	}
-	
-	async loadAllData() { 
+
+	async loadAllData() {
 
 		if (!this.loadablespender) return;
 		if (this.fullData != null) return;
 		await this.getSpenderTransaction(); //will load data itself (efficiency)
-		
+
 	}
-	
+
 	async getTransaction() {
 
 		if (this.tx) return this.tx;
 		this.tx = await getTransactionFull(this.txid);
 		return this.tx;
-		
+
 	}
-	
+
 	async getSpenderTransaction() {
-		
+
 		if (this.spendertx) return this.spendertx;
-		
+
 		this.spendertx = await getTransactionFull(this.spendertxid);
-		
+
 		if (this.fullData == null) {
-			
+
 			let p = this.spendertx.inputs.find(e => (e.txid == this.txid && e.outpoint == this.outpoint));
-			
+
 			if (p) {
-			
+
 				this.fullData = new UTXOFullData(p.fullData.scriptsig, p.fullData.sequence, p.fullData.witness); //duplication
-			
+
 			}
-			
+
 		}
-		
+
 		return this.spendertx;
-		
+
 	}
-	
+
 	getAddress() {
-		
+
 		let raw = Buffer.from(this.scriptpubkey, 'hex');
-		
+
 		try {
-			
+
 			return bitcoin.address.fromOutputScript(raw, bitcoin.networks.bitcoin);
-			
+
 		} catch (e) {
-			
+
 			return "NONSTANDARD";
-			
+
 		}
-		
+
 	}
-	
+
 }
 
 //
@@ -767,53 +789,65 @@ class UTXO {
 //
 
 async function getAddressUtxos(address) { //TODO bad, should not just load everything you tell it to
-	
-	const { bitcoin: { addresses } } = mempoolJS({
+
+	const {
+		bitcoin: {
+			addresses
+		}
+	} = mempoolJS({
 		hostname: 'mempool.space'
 	});
-	
-	let utxs = await addresses.getAddressTxsUtxo({ address });
-	
+
+	let utxs = await addresses.getAddressTxsUtxo({
+		address
+	});
+
 	let promises = [];
-	
+
 	for (let i = 0; i < utxs.length; i++) {
-		
+
 		promises.push(getUtxo(utxs[i].txid, utxs[i].vout));
-		
+
 	}
-	
+
 	let utxDatas = await Promise.all(promises);
-	
+
 	return utxDatas;
-	
+
 }
 
 async function getUtxo(txid, outpoint) {
-	
+
 	let tx = await getTransactionFull(txid);
 	if (tx.outputs.length <= outpoint) throw new Error("Invalid tx outpoint");
 	return tx.outputs[outpoint]; //not fully loaded
-	
+
 }
 
 async function getTransactionFull(txid) {
-	
-	const { bitcoin: { transactions } } = mempoolJS({
+
+	const {
+		bitcoin: {
+			transactions
+		}
+	} = mempoolJS({
 		hostname: 'mempool.space'
 	});
-	
+
 	let [tx, outsp] = await Promise.all([
 		getTransactionOnlyData(txid),
-		transactions.getTxOutspends({ txid }).catch((error => {
+		transactions.getTxOutspends({
+			txid
+		}).catch((error => {
 			throw new Error("Could not load outspends: " + txid);
 		}))
 	]);
-	
+
 	let ins = [];
 	for (let i = 0; i < tx.vin.length; i++) {
-		
+
 		let utxfd = new UTXOFullData(tx.vin[i].scriptsig, tx.vin[i].sequence, tx.vin[i].witness != undefined ? tx.vin[i].witness : []);
-		
+
 		ins.push(
 			new UTXO(
 				tx.vin[i].prevout.scriptpubkey,
@@ -827,30 +861,36 @@ async function getTransactionFull(txid) {
 		);
 
 	}
-	
+
 	let outs = [];
 	for (let i = 0; i < tx.vout.length; i++) {
-		
+
 		let utxfd = outsp[i].spent ? undefined : new UTXOFullData();
-		
+
 		outs.push(new UTXO(tx.vout[i].scriptpubkey, tx.vout[i].value, outsp[i].spent ? (outsp[i].status.confirmed ? outsp[i].status.block_height : 0) : -1, txid, i, outsp[i].txid, utxfd));
-		
+
 	}
-	
+
 	return new Transaction(ins, outs, tx.version, tx.locktime, tx.status.confirmed ? tx.status.block_height : 0);
-	
+
 }
 
 async function getTransactionOnlyData(txid) {
-	
-	const { bitcoin: { transactions } } = mempoolJS({
+
+	const {
+		bitcoin: {
+			transactions
+		}
+	} = mempoolJS({
 		hostname: 'mempool.space'
 	});
-	
-	return await transactions.getTx({ txid }).catch((error) => {
+
+	return await transactions.getTx({
+		txid
+	}).catch((error) => {
 		throw new Error("Could not load tx: " + txid);
 	});
-	
+
 }
 
 //
@@ -858,60 +898,80 @@ async function getTransactionOnlyData(txid) {
 // 
 
 function cartToReal(pos) {
-  let x = (pos.x - canvasOrigin.x) / canvasStepRatioX();
-  let y = (pos.y - canvasOrigin.y) / canvasStepRatioY();
+	let x = (pos.x - canvasOrigin.x) / canvasStepRatioX();
+	let y = (pos.y - canvasOrigin.y) / canvasStepRatioY();
 
-  return new Point(x, y);
+	return new Point(x, y);
 }
 
 function realToCart(pos) {
-  let x = pos.x * canvasStepRatioX() + canvasOrigin.x;
-  let y = pos.y * canvasStepRatioY() + canvasOrigin.y;
+	let x = pos.x * canvasStepRatioX() + canvasOrigin.x;
+	let y = pos.y * canvasStepRatioY() + canvasOrigin.y;
 
-  return new Point(x, y);
+	return new Point(x, y);
 }
 
 function pointInBox(point, box) {
-	
+
 	return (point.x > box.pos.x &&
-	point.y > box.pos.y &&
-	point.x < box.pos.x + box.width &&
-	point.y < box.pos.y + box.height);
+		point.y > box.pos.y &&
+		point.x < box.pos.x + box.width &&
+		point.y < box.pos.y + box.height);
 
 }
 
 function nFormatter(num, digits) {
-  const lookup = [
-    { value: 1, symbol: "" },
-    { value: 1e3, symbol: "k" },
-    { value: 1e6, symbol: "M" },
-    { value: 1e9, symbol: "G" },
-    { value: 1e12, symbol: "T" },
-    { value: 1e15, symbol: "P" },
-    { value: 1e18, symbol: "E" }
-  ];
-  const rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
-  var item = lookup.slice().reverse().find(function(item) {
-    return num >= item.value;
-  });
-  return item ? (num / item.value).toFixed(digits).replace(rx, "$1") + item.symbol : "0";
+	const lookup = [{
+			value: 1,
+			symbol: ""
+		},
+		{
+			value: 1e3,
+			symbol: "k"
+		},
+		{
+			value: 1e6,
+			symbol: "M"
+		},
+		{
+			value: 1e9,
+			symbol: "G"
+		},
+		{
+			value: 1e12,
+			symbol: "T"
+		},
+		{
+			value: 1e15,
+			symbol: "P"
+		},
+		{
+			value: 1e18,
+			symbol: "E"
+		}
+	];
+	const rx = /\.0+$|(\.[0-9]*[1-9])0+$/;
+	var item = lookup.slice().reverse().find(function(item) {
+		return num >= item.value;
+	});
+	return item ? (num / item.value).toFixed(digits).replace(rx, "$1") + item.symbol : "0";
 }
 
 function satsAsBitcoin(n) {
-	
-	return (n/SATS_PER_COIN).toFixed(8);
-	
+
+	return (n / SATS_PER_COIN).toFixed(8);
+
 }
 
 function getAddressType(address) {
-	
+
 	if (address.length >= 26 && address.length <= 35 && address.startsWith("1")) return "p2pkh";
 	if (address.length >= 26 && address.length <= 35 && address.startsWith("3")) return "p2sh";
 	if (address.length == 62 && address.startsWith("bc1q")) return "p2wsh";
 	if (address.length == 42 && address.startsWith("bc1q")) return "p2wpkh";
 	if (address.startsWith("bc1p")) return "p2tr";
 	return "Unknown";
-	
+
 }
 
 //
@@ -922,10 +982,10 @@ let wheelDelta = 0;
 
 function mouseWheel(event) {
 	if (mouseInBounds && keyIsDown(SHIFT)) {
-	  wheelDelta = event.delta;
-	  return false;	
+		wheelDelta = event.delta;
+		return false;
 	} else {
-	  return true;
+		return true;
 	}
 }
 
@@ -934,253 +994,260 @@ function mouseWheel(event) {
 //
 
 const PlugStackState = {
-	
+
 	ALLDISPLAYED: 0,
 	MISSING: 1,
 	MUTABLE: 2
-	
+
 }
 
 const MutabilityType = {
-	
+
 	ALL: 0,
 	OUTPUTSONLY: 1,
 	NONE: 2
-	
+
 }
 
 const HighlightState = {
-	
+
 	NORMAL: 0,
 	PRESSED: 1,
 	HOVER: 2
-	
+
 };
 
 const ButtonSide = {
-	
+
 	LEFT: 0,
 	RIGHT: 1
-	
+
 };
 
 class BoundingBox {
-  constructor(pos, width, height) {
-    this.pos = pos;
-    this.width = width;
-    this.height = height;
-  }
+	constructor(pos, width, height) {
+		this.pos = pos;
+		this.width = width;
+		this.height = height;
+	}
 }
 
 class InputOutputDisplayElement {
-	
+
 	static rowHeight = 1;
 	static rowMargin = 1;
 	static rowWidth = 1;
-	
+
 	rowHeight = InputOutputDisplayElement.rowHeight;
 	rowMargin = InputOutputDisplayElement.rowMargin;
 	rowWidth = InputOutputDisplayElement.rowWidth;
-	
+
 	constructor(bounds, mutable = MutabilityType.NONE, topOffset = 0, colors = COLOR_PALETTE_GRAY, maxplugs = 100000) {
 		this.normalbounds = bounds;
 		this.colors = colors;
-		
+
 		this.topOffset = topOffset;
-			
+
 		this.leftState = PlugStackState.ALLDISPLAYED;
 		this.rightState = PlugStackState.ALLDISPLAYED;
-		
+
 		this.mutable = mutable;
-		
+
 		this.leftPlugs = [];
 		this.rightPlugs = [];
 		this.maxplugs = maxplugs;
-		
+
 		this.maxnheight = 0;
-		
+
 	}
-	
+
 	addVisualPlug(side, plug, index = -1) {
-		
+
 		let arr = side == ButtonSide.LEFT ? this.leftPlugs : this.rightPlugs;
-		if (index != -1) arr.splice(index, 0, plug); else arr.push(plug);
-		
+		if (index != -1) arr.splice(index, 0, plug);
+		else arr.push(plug);
+
 	}
-	
+
 	removeVisualPlug(plug) {
-		
+
 		this.leftPlugs.remove(plug);
 		this.rightPlugs.remove(plug);
-		
+
 	}
-	
+
 	getState(side) {
-	  
+
 		if (this.mutable == MutabilityType.ALL) {
-			
+
 			return PlugStackState.MUTABLE;
-			
+
 		} else if (this.mutable == MutabilityType.OUTPUTSONLY && side == ButtonSide.RIGHT) {
-			
+
 			return PlugStackState.MUTABLE;
-			
+
 		} else {
-			
+
 			if (side == ButtonSide.LEFT) {
-				
+
 				return this.leftState;
-				
+
 			} else {
-				
+
 				return this.rightState;
-				
+
 			}
-			
+
 		}
-	  
+
 	}
-	
+
 	trySetState(side, state) {
-		
+
 		if (side == ButtonSide.LEFT) {
-			
+
 			this.leftState = state;
-			
+
 		} else {
-			
+
 			this.rightState = state;
-			
+
 		}
-	
+
 	}
-	
+
 	getBounds() {
-		return new BoundingBox(new Point(this.normalbounds.pos.x, this.normalbounds.pos.y), this.normalbounds.width, this.normalbounds.height + this.maxnheight*(this.rowHeight+this.rowMargin));
+		return new BoundingBox(new Point(this.normalbounds.pos.x, this.normalbounds.pos.y), this.normalbounds.width, this.normalbounds.height + this.maxnheight * (this.rowHeight + this.rowMargin));
 	}
-	
+
 	render() {
 		const thiso = this;
-		
+
 		let decisionpointer = null;
 		let decisiontitle = null;
-		
-		let pi = new Point((thiso.getBounds().pos.x + thiso.getBounds().width)-12, thiso.getBounds().pos.y+12);
+
+		let pi = new Point((thiso.getBounds().pos.x + thiso.getBounds().width) - 12, thiso.getBounds().pos.y + 12);
 		let p = cartToReal(pi);
-		
+
 		if (hoverElement == thiso) {
 
-			if ( (((mouseX-p.x)**2 + (mouseY-p.y)**2) < (16/canvasStepRatioY())**2) && (!mouseIsPressed || mouseClickedThisFrame)) {
+			if ((((mouseX - p.x) ** 2 + (mouseY - p.y) ** 2) < (16 / canvasStepRatioY()) ** 2) && (!mouseIsPressed || mouseClickedThisFrame)) {
 
 				decisionpointer = "pointer";
 				if (mouseClickedThisFrame) {
-				  
-				  uielements.remove(thiso);
-				  thiso.onRemoved();
-				  
+
+					uielements.remove(thiso);
+					thiso.onRemoved();
+
 				}
 
 			}
 
 		}
-		
+
 		let sideContexts = [];
 		sideContexts.push({
-				side: ButtonSide.LEFT,
-				plugs: this.leftPlugs,
-				xoffset: 0
-			});
+			side: ButtonSide.LEFT,
+			plugs: this.leftPlugs,
+			xoffset: 0
+		});
 		sideContexts.push({
-				side: ButtonSide.RIGHT,
-				plugs: this.rightPlugs,
-				xoffset: this.getBounds().width-this.rowWidth
-			});
-		
+			side: ButtonSide.RIGHT,
+			plugs: this.rightPlugs,
+			xoffset: this.getBounds().width - this.rowWidth
+		});
+
 		function getRenderSide(side, plugs) {
-		
+
 			let toRenderSide = [...plugs];
 			let dc = false;
-				
+
 			let lstate = thiso.getState(side);
 			if (lstate == PlugStackState.ALLDISPLAYED || lstate == PlugStackState.MISSING) {
-				
+
 				//render immutable plugs
 				dc = true;
-				
+
 				if (lstate == PlugStackState.MISSING) {
-				
+
 					//render add button
-					toRenderSide.push(new ClickHandler(function() { thiso.addButtonPushed(side); } ));
-				
-				}	
-				
+					toRenderSide.push(new ClickHandler(function() {
+						thiso.addButtonPushed(side);
+					}));
+
+				}
+
 			} else if (lstate == PlugStackState.MUTABLE) {
-				
+
 				//render mutable plugs	
 				//render plug adder
 				if (toRenderSide.length < thiso.maxplugs) toRenderSide.push(new ClickHandler(function() {
-				
+
 					let c = thiso.getNewPlug(side, true);
 					c.attach(side == ButtonSide.LEFT ? ButtonSide.RIGHT : ButtonSide.LEFT, thiso);
-					drag = { 
-						drag: function() { c.isDragging(side); },
-						drop: function() { c.onDragDrop(side); }
+					drag = {
+						drag: function() {
+							c.isDragging(side);
+						},
+						drop: function() {
+							c.onDragDrop(side);
+						}
 					};
-				
+
 				}, SideTabType.DRAG_AND_DROP_PLUG));
-				
+
 			}
-			
+
 			return {
-				
+
 				data: toRenderSide,
 				dc: dc
-				
+
 			};
-		
+
 		}
 
 		this.maxnheight = max(getRenderSide(sideContexts[0].side, sideContexts[0].plugs).data.length, getRenderSide(sideContexts[1].side, sideContexts[1].plugs).data.length);
-		
+
 		if (selectedItem == this) {
 			fill(0);
 			stroke(0);
 			strokeWeight(max(9, 9 / canvasStepRatioY()));
 			let doP = cartToReal(this.getBounds().pos);
 			rect(
-			  doP.x,
-			  doP.y,
-			  this.getBounds().width / canvasStepRatioX(),
-			  this.getBounds().height / canvasStepRatioY(),
-			  10/canvasStepRatioY()
+				doP.x,
+				doP.y,
+				this.getBounds().width / canvasStepRatioX(),
+				this.getBounds().height / canvasStepRatioY(),
+				10 / canvasStepRatioY()
 			);
-			
+
 		}
-		
+
 		fill(this.colors.normalcolor);
 		stroke(this.colors.darkcolor);
-		strokeWeight(3/canvasStepRatioY());
+		strokeWeight(3 / canvasStepRatioY());
 		let doP = cartToReal(this.getBounds().pos);
 		rect(
-		  doP.x,
-		  doP.y,
-		  this.getBounds().width / canvasStepRatioX(),
-		  this.getBounds().height / canvasStepRatioY(),
-		  10/canvasStepRatioY()
+			doP.x,
+			doP.y,
+			this.getBounds().width / canvasStepRatioX(),
+			this.getBounds().height / canvasStepRatioY(),
+			10 / canvasStepRatioY()
 		);
-		
+
 		let buttoning = false;
-		
+
 		for (let i = 0; i < 2; i++) {
-			
+
 			let context = sideContexts[i];
 			let rs = getRenderSide(context.side, context.plugs);
-			
+
 			for (let j = 0; j < rs.data.length; j++) {
-				
+
 				let cdata = rs.data[j];
-				
-				let jbounds = new BoundingBox(new Point(context.xoffset, this.topOffset + j*(this.rowHeight+this.rowMargin)), this.rowWidth, this.rowHeight);
+
+				let jbounds = new BoundingBox(new Point(context.xoffset, this.topOffset + j * (this.rowHeight + this.rowMargin)), this.rowWidth, this.rowHeight);
 				let jboundsabs = new BoundingBox(new Point(jbounds.pos.x + this.getBounds().pos.x, jbounds.pos.y + this.getBounds().pos.y), jbounds.width, jbounds.height);
 				let kbl = pointInBox(realToCart(new Point(mouseX, mouseY)), jboundsabs) && hoverElement == this;
 				if (kbl && !mouseIsPressed) {
@@ -1190,16 +1257,20 @@ class InputOutputDisplayElement {
 
 				}
 				let hstate;
-				
+
 				if (cdata.type == SideTabType.DRAG_AND_DROP_PLUG) {
 					if (!rs.dc) {
 						if (kbl) {
 							if (mouseClickedThisFrame) {
 								buttoning = true;
 								let oside = context.side == ButtonSide.LEFT ? ButtonSide.RIGHT : ButtonSide.LEFT;
-								drag = { 
-									drag: function() { cdata.isDragging(oside); },
-									drop: function() { cdata.onDragDrop(oside); }
+								drag = {
+									drag: function() {
+										cdata.isDragging(oside);
+									},
+									drop: function() {
+										cdata.onDragDrop(oside);
+									}
 								};
 							}
 							if (mouseIsPressed) {
@@ -1228,65 +1299,65 @@ class InputOutputDisplayElement {
 						hstate = HighlightState.NORMAL;
 					}
 				}
-				
-				strokeWeight(3/canvasStepRatioY());
+
+				strokeWeight(3 / canvasStepRatioY());
 				stroke(this.colors.darkcolor);
 				fill(this.colors.normalcolor);
 				if (hstate == HighlightState.PRESSED && !drag) {
 					fill(this.colors.darkcolor);
-				} else if (hstate == HighlightState.NORMAL){
+				} else if (hstate == HighlightState.NORMAL) {
 					fill(this.colors.normalcolor);
-				} else if (hstate == HighlightState.HOVER){
+				} else if (hstate == HighlightState.HOVER) {
 					fill(this.colors.lightcolor);
 				}
-				
+
 				let v1 = cartToReal(jboundsabs.pos);
-				
+
 				if (cdata.type == SideTabType.CLICK_BUTTON && cdata.display == SideTabType.CLICK_BUTTON) {
-					
-					let w1 = jbounds.width/canvasStepRatioX();
-					let h1 = jbounds.height/canvasStepRatioX();
+
+					let w1 = jbounds.width / canvasStepRatioX();
+					let h1 = jbounds.height / canvasStepRatioX();
 					rect(v1.x, v1.y, w1, h1);
 					noStroke();
 					fill(this.colors.darkcolor);
-					circle(v1.x + (w1/2), v1.y + h1/2, (this.rowWidth/8)/canvasStepRatioY());
-					
-					circle(v1.x + (w1*1.5/5), v1.y + h1/2, (this.rowWidth/8)/canvasStepRatioY());
-					circle(v1.x + (w1*3.5/5), v1.y + h1/2, (this.rowWidth/8)/canvasStepRatioY());
-					
+					circle(v1.x + (w1 / 2), v1.y + h1 / 2, (this.rowWidth / 8) / canvasStepRatioY());
+
+					circle(v1.x + (w1 * 1.5 / 5), v1.y + h1 / 2, (this.rowWidth / 8) / canvasStepRatioY());
+					circle(v1.x + (w1 * 3.5 / 5), v1.y + h1 / 2, (this.rowWidth / 8) / canvasStepRatioY());
+
 				} else if (cdata.type == SideTabType.DRAG_AND_DROP_PLUG) {
 
 					let o = context.side == ButtonSide.LEFT ? cdata.left : cdata.right;
 					if (o != null) {
 
 						stroke(o.colors.darkcolor);
-						fill((cdata.dragging == (context.side == ButtonSide.LEFT ? ButtonSide.RIGHT : ButtonSide.LEFT))
-							? o.colors.darkcolor : o.colors.normalcolor);						
-						
+						fill((cdata.dragging == (context.side == ButtonSide.LEFT ? ButtonSide.RIGHT : ButtonSide.LEFT)) ?
+							o.colors.darkcolor : o.colors.normalcolor);
+
 					}
-					drawPlug(v1.x, v1.y, jbounds.width/canvasStepRatioX(), jbounds.height/canvasStepRatioY(), context.side);
-					
+					drawPlug(v1.x, v1.y, jbounds.width / canvasStepRatioX(), jbounds.height / canvasStepRatioY(), context.side);
+
 				} else if (cdata.display == SideTabType.DRAG_AND_DROP_PLUG) { //buttons
-					
-					drawPlug(v1.x, v1.y, jbounds.width/canvasStepRatioX(), jbounds.height/canvasStepRatioY(), context.side, true);
-					
+
+					drawPlug(v1.x, v1.y, jbounds.width / canvasStepRatioX(), jbounds.height / canvasStepRatioY(), context.side, true);
+
 				}
-				
+
 			}
-			
+
 		}
-		
+
 		this.betweenRender();
 
 		if (hoverElement == thiso) {
 
 			if (decisionpointer == null) decisionpointer = "grab";
-  
+
 			//draw X
 			fill(thiso.colors.normalcolor);
 			stroke(thiso.colors.darkcolor);
-			strokeWeight(3/canvasStepRatioY());
-			circle(p.x, p.y, 30/canvasStepRatioY());
+			strokeWeight(3 / canvasStepRatioY());
+			circle(p.x, p.y, 30 / canvasStepRatioY());
 			stroke(255, 0, 0);
 			let l1 = cartToReal(new Point(pi.x + 5, pi.y + 5));
 			let l2 = cartToReal(new Point(pi.x - 5, pi.y - 5));
@@ -1306,21 +1377,25 @@ class InputOutputDisplayElement {
 			}
 
 		}
-		
+
 		if (!_cursorSetFrame) setCursor(decisionpointer);
 		if (!_titleSetFrame) setTitle(decisiontitle);
-		
+
 	}
-	
+
 	test(cartPos) {
 		return (pointInBox(cartPos, this.getBounds()));
 	}
-	
+
 	onRemoved() {
 		let n2 = this.leftPlugs.length;
-		for (let i = 0; i < n2; i++) { this.leftPlugs[0].sever(); }
+		for (let i = 0; i < n2; i++) {
+			this.leftPlugs[0].sever();
+		}
 		let n = this.rightPlugs.length;
-		for (let i = 0; i < n; i++) { this.rightPlugs[0].sever(); }
+		for (let i = 0; i < n; i++) {
+			this.rightPlugs[0].sever();
+		}
 	} //override this?
 	betweenRender() {} //override this
 	async onFocused() {
@@ -1333,118 +1408,119 @@ class InputOutputDisplayElement {
 		loadingSelection = false;
 	}
 	async onFocusedChild() {} //override this
-	
+
 	produceAltText(side, sideTabType) {
-		throw new Error("This needs to be implemented by subclass!");	
+		throw new Error("This needs to be implemented by subclass!");
 	}
-	
+
 	addButtonPushed(side) { //loadmoreinputs (side)
 		throw new Error("This needs to be implemented by subclass!");
 	}
-	
+
 	getNewPlug(side, editable) { //override this
 		return new Plug(editable);
 	}
-	
+
 }
 
 const SideTabType = {
-	
+
 	DRAG_AND_DROP_PLUG: 0,
 	CLICK_BUTTON: 1
-	
+
 }
 
 class ClickHandler {
-	
+
 	type = SideTabType.CLICK_BUTTON;
-	
+
 	constructor(action, display = this.type) {
-		
+
 		this.action = action;
 		this.display = display;
-		
+
 	}
-	
+
 }
 
 //plugs
 
 
 class Plug {
-	
+
 	type = SideTabType.DRAG_AND_DROP_PLUG;
-	
+
 	constructor(editable = false) {
-		
+
 		this.left = null;
 		this.right = null;
-		
+
 		this.previousDragTarget = null;
 		this.previousDragIndex = 0;
-		
+
 		this.editable = editable;
-		
+
 		this.dragging = null;
-		
+
 	}
-	
+
 	sever() {
-		
+
 		this.cut(ButtonSide.LEFT, true);
 		this.cut(ButtonSide.RIGHT, true);
-		
+
 	}
-	
+
 	cut(side, force = true) {
 
 		let t = side == ButtonSide.LEFT ? this.left : this.right;
 		if (t == null) return;
 		this.disconnectLogically();
-		
+
 		if (force) t.trySetState(side == ButtonSide.LEFT ? ButtonSide.RIGHT : ButtonSide.LEFT, PlugStackState.MISSING);
 		t.removeVisualPlug(this);
-		
-		if (side == ButtonSide.LEFT) this.left = null; else this.right = null;
-		
+
+		if (side == ButtonSide.LEFT) this.left = null;
+		else this.right = null;
+
 		if (selectedItem) selectedItem.onFocused();
-		
+
 	}
-	
+
 	fullyConnected() {
-		
+
 		if (this.left == null || this.right == null) return false;
 		return true;
-		
+
 	}
-	
+
 	disconnectLogically() {
-		
+
 		if (!this.fullyConnected()) return;
 		this.childDisconnectLogically();
-		
+
 	}
-	
+
 	connectLogically(index) {
-		
+
 		if (!this.fullyConnected()) return true;
 		return this.childConnectLogically(index);
-		
+
 	}
-	
+
 	attach(side, element, index = -1) {
- 
+
 		if (!this.testCompatibility(side, element)) return;
 		this.cut(side, false);
-		
+
 		//test for cycles
 		let other = (side == ButtonSide.LEFT) ? this.right : this.left;
-		
+
 		if (other != null) {
-			
+
 			let tracked = [element, other];
 			let queue = [element, other];
-			
+
 			while (queue.length != 0) {
 				let c = queue.pop();
 				for (let i = 0; i < c.rightPlugs.length; i++) {
@@ -1452,79 +1528,81 @@ class Plug {
 					if (ct != null) {
 						if (tracked.includes(ct)) {
 							return;
-						} else {						
+						} else {
 							tracked.push(ct);
 							queue.push(ct);
 						}
-					}	
+					}
 				}
 			}
-			
+
 		}
-		
+
 		if (element.maxplugs <= (side == ButtonSide.LEFT ? element.rightPlugs : element.leftPlugs).length) return;
-		if (side == ButtonSide.LEFT) this.left = element; else this.right = element;
+		if (side == ButtonSide.LEFT) this.left = element;
+		else this.right = element;
 		if (this.connectLogically(index)) {
 			element.addVisualPlug(side == ButtonSide.LEFT ? ButtonSide.RIGHT : ButtonSide.LEFT, this, index);
 		} else {
-			if (side == ButtonSide.LEFT) this.left = null; else this.right = null;
+			if (side == ButtonSide.LEFT) this.left = null;
+			else this.right = null;
 		}
-		
+
 		if (selectedItem) selectedItem.onFocused();
-		
+
 	}
-	
+
 	isDragging(side) {
-		
+
 		this.dragging = side;
 
 		//let dragger = side == ButtonSide.LEFT ? this.left : this.right;
 		let stationary = side == ButtonSide.LEFT ? this.right : this.left;
 		if (stationary == null) throw new Error("Null stationary node when dragging.");
-		
+
 		let o2 = stationary;
 		let v = o2.colors;
-		let rw = this.getSize(side).width/canvasStepRatioX();
-		let ry = this.getSize(side).height/canvasStepRatioY();
+		let rw = this.getSize(side).width / canvasStepRatioX();
+		let ry = this.getSize(side).height / canvasStepRatioY();
 
 		let cono = (side == ButtonSide.LEFT ? o2.leftPlugs : o2.rightPlugs);
 		let inde = cono.indexOf(this);
 		let ind = inde == -1 ? 0 : inde;
 		let vPos2 = new BoundingBox(
 			new Point(
-				o2.getBounds().pos.x + (side == ButtonSide.LEFT ? 0 : (o2.getBounds().width-o2.rowWidth)),
-				o2.getBounds().pos.y + o2.topOffset + o2.rowHeight*ind + (o2.rowMargin*ind)
+				o2.getBounds().pos.x + (side == ButtonSide.LEFT ? 0 : (o2.getBounds().width - o2.rowWidth)),
+				o2.getBounds().pos.y + o2.topOffset + o2.rowHeight * ind + (o2.rowMargin * ind)
 			),
 			o2.rowWidth,
 			o2.rowHeight
 		);
 		let doP2 = cartToReal(vPos2.pos);
 
-		let thatCenX = doP2.x + (vPos2.width / canvasStepRatioX())/2;
-		thatCenX += (side ? 1 : -1) * (vPos2.width / canvasStepRatioX())/2;
-		let thatCenY = doP2.y + (vPos2.height / canvasStepRatioY())/2;
-		
-		drawBezier(mouseX + (side ? -rw/2 : rw/2), mouseY, thatCenX, thatCenY, 70);
-		strokeWeight(3/canvasStepRatioY());
+		let thatCenX = doP2.x + (vPos2.width / canvasStepRatioX()) / 2;
+		thatCenX += (side ? 1 : -1) * (vPos2.width / canvasStepRatioX()) / 2;
+		let thatCenY = doP2.y + (vPos2.height / canvasStepRatioY()) / 2;
+
+		drawBezier(mouseX + (side ? -rw / 2 : rw / 2), mouseY, thatCenX, thatCenY, 70);
+		strokeWeight(3 / canvasStepRatioY());
 		v.darkcolor.setAlpha(70);
 		v.normalcolor.setAlpha(70);
 		stroke(v.darkcolor);
 		fill(v.normalcolor);
 		v.darkcolor.setAlpha(255);
 		v.normalcolor.setAlpha(255);
-		drawPlug(mouseX-rw/2, mouseY-ry/2, rw, ry, side == ButtonSide.LEFT ? ButtonSide.RIGHT : ButtonSide.LEFT);
+		drawPlug(mouseX - rw / 2, mouseY - ry / 2, rw, ry, side == ButtonSide.LEFT ? ButtonSide.RIGHT : ButtonSide.LEFT);
 
 		let handled = null;
 		let index = 0;
-		let mCart = realToCart(new Point(mouseX, mouseY));		
-		for (let i = uielements.length-1; i >= 0; i--) {
+		let mCart = realToCart(new Point(mouseX, mouseY));
+		for (let i = uielements.length - 1; i >= 0; i--) {
 			let celement = uielements[i];
 			if (celement.test(mCart)) {
 
-				let ys = (mCart.y - celement.getBounds().pos.y - celement.topOffset) + (celement.rowMargin/2);
+				let ys = (mCart.y - celement.getBounds().pos.y - celement.topOffset) + (celement.rowMargin / 2);
 				index = floor(ys / (celement.rowHeight + celement.rowMargin));
 				index = max(0, min((side == ButtonSide.LEFT ? celement.rightPlugs : celement.leftPlugs).length, index));
-				
+
 				if (celement != this.previousDragTarget || index != this.previousDragIndex) {
 					if (side == ButtonSide.RIGHT && celement.mutable == MutabilityType.OUTPUTSONLY || celement.mutable == MutabilityType.NONE) break;
 					this.attach(side, celement, index);
@@ -1537,18 +1615,18 @@ class Plug {
 		if (handled == null && this.previousDragTarget != null) {
 			this.cut(side, false);
 		}
-		
+
 		this.previousDragTarget = handled;
 		this.previousDragIndex = index;
 	}
-	
+
 	onDragDrop(side) {
-		
+
 		this.dragging = null;
 		if (!this.fullyConnected()) this.sever();
-		
+
 	}
-	
+
 	childDisconnectLogically() {
 		throw new Error("This needs to be implemented by subclass!");
 	}
@@ -1556,25 +1634,28 @@ class Plug {
 	childConnectLogically(index) {
 		throw new Error("This needs to be implemented by subclass!");
 	}
-	
+
 	testCompatibility(side, element) { //override this
 		if (side == ButtonSide.LEFT && this.right == element) return false;
 		if (side == ButtonSide.RIGHT && this.left == element) return false;
 		return true;
 	}
-	
+
 	getSize(side) { //override this
-		return { width: 0, height: 0 };
+		return {
+			width: 0,
+			height: 0
+		};
 	}
-	
+
 }
 
 class TransactionOutPlug extends Plug {
-	
+
 	constructor(editable = false) {
 		super(editable);
 	}
-	
+
 	childDisconnectLogically() {
 		if (this.editable) {
 			this.left.transaction.outputs.remove(this.right.utxo);
@@ -1582,47 +1663,48 @@ class TransactionOutPlug extends Plug {
 		} else {
 			this.left.loadedoutputs.remove(this.right.utxo);
 		}
-		
+
 	}
 
 	childConnectLogically(index) {
-		
+
 		if (this.editable) {
 			let arr = this.left.transaction.outputs;
-			if (index != -1) arr.splice(index, 0, this.right.utxo); else arr.push(this.right.utxo);
+			if (index != -1) arr.splice(index, 0, this.right.utxo);
+			else arr.push(this.right.utxo);
 			this.right.utxo.tx = this.left.transaction;
 		}
-		
+
 		return true;
-		
+
 	}
-	
+
 	testCompatibility(side, element) {
 		if (!super.testCompatibility(side, element)) return false;
-		if (side == ButtonSide.LEFT && element.constructor.name != "TransactionDisplay") return false; 
-		if (side == ButtonSide.RIGHT && element.constructor.name != "UTXODisplay") return false; 
+		if (side == ButtonSide.LEFT && element.constructor.name != "TransactionDisplay") return false;
+		if (side == ButtonSide.RIGHT && element.constructor.name != "UTXODisplay") return false;
 		return true;
 	}
-	
+
 	getSize(side) {
-		
+
 		return {
-			
+
 			width: side == ButtonSide.LEFT ? TransactionDisplay.rowWidth : UTXODisplay.rowWidth,
 			height: side == ButtonSide.LEFT ? TransactionDisplay.rowHeight : UTXODisplay.rowHeight
-			
+
 		};
-		
+
 	}
-	
+
 }
 
-class TransactionInPlug extends Plug { 
-	
+class TransactionInPlug extends Plug {
+
 	constructor(editable = false) {
 		super(editable);
 	}
-	
+
 	childDisconnectLogically() {
 		if (this.editable) {
 			this.right.transaction.inputs.remove(this.left.utxo);
@@ -1630,42 +1712,43 @@ class TransactionInPlug extends Plug {
 		} else {
 			this.right.loadedinputs.remove(this.left.utxo);
 		}
-		
+
 	}
 
 	childConnectLogically(index) {
-	
+
 		if (this.editable) {
 			if (!this.left.utxo.getTXID()) {
 				return false;
 			}
 			let arr = this.right.transaction.inputs;
-			if (index != -1) arr.splice(index, 0, this.left.utxo); else arr.push(this.left.utxo);
+			if (index != -1) arr.splice(index, 0, this.left.utxo);
+			else arr.push(this.left.utxo);
 			this.left.utxo.spendertx = this.right.transaction;
 		}
-		
+
 		return true;
-	
+
 	}
-	
+
 	testCompatibility(side, element) {
 		if (!super.testCompatibility(side, element)) return false;
-		if (side == ButtonSide.LEFT && element.constructor.name != "UTXODisplay") return false; 
-		if (side == ButtonSide.RIGHT && element.constructor.name != "TransactionDisplay") return false; 
+		if (side == ButtonSide.LEFT && element.constructor.name != "UTXODisplay") return false;
+		if (side == ButtonSide.RIGHT && element.constructor.name != "TransactionDisplay") return false;
 		return true;
 	}
-	
+
 	getSize(side) {
-		
+
 		return {
-			
+
 			width: side == ButtonSide.LEFT ? UTXODisplay.rowWidth : TransactionDisplay.rowWidth,
 			height: side == ButtonSide.LEFT ? UTXODisplay.rowHeight : TransactionDisplay.rowHeight
-			
+
 		};
-		
+
 	}
-	
+
 }
 
 //
@@ -1673,107 +1756,107 @@ class TransactionInPlug extends Plug {
 //
 
 class UTXODisplay extends InputOutputDisplayElement {
-	
+
 	static rowHeight = 30;
 	static rowMargin = 5;
 	static rowWidth = 40;
-	
+
 	rowHeight = UTXODisplay.rowHeight;
 	rowMargin = UTXODisplay.rowMargin;
 	rowWidth = UTXODisplay.rowWidth;
-	
+
 	constructor(centerPos, utxo, mutable) {
-		super(new BoundingBox(new Point(centerPos.x-100, centerPos.y-50), 200, 100), mutable, 65,
-			utxo.status > 0 ? COLOR_PALETTE_GREEN
-			: (
-				utxo.status == 0 ? COLOR_PALETTE_PURPLE
-				: (
-					utxo.status == -1 ? COLOR_PALETTE_GOLD
-					: COLOR_PALETTE_GRAY
+		super(new BoundingBox(new Point(centerPos.x - 100, centerPos.y - 50), 200, 100), mutable, 65,
+			utxo.status > 0 ? COLOR_PALETTE_GREEN :
+			(
+				utxo.status == 0 ? COLOR_PALETTE_PURPLE :
+				(
+					utxo.status == -1 ? COLOR_PALETTE_GOLD :
+					COLOR_PALETTE_GRAY
 				)
 			), 1
 		);
 		this.utxo = utxo;
-		
+
 		this.trySetState(ButtonSide.LEFT, PlugStackState.MISSING);
 		this.trySetState(ButtonSide.RIGHT, PlugStackState.MISSING);
-		
+
 	}
-	
+
 	betweenRender() {
-		
+
 		let bounds = this.getBounds();
 		let pos = cartToReal(bounds.pos);
-		
+
 		let xFractional = bounds.width / canvasStepRatioX();
-		let centerX = pos.x + xFractional*0.5;
+		let centerX = pos.x + xFractional * 0.5;
 		let yFractional = bounds.height / canvasStepRatioY();
-		
+
 		fill(100);
 		noStroke();
 		textAlign(CENTER, CENTER);
-		
-		textSize(20/canvasStepRatioY());
+
+		textSize(20 / canvasStepRatioY());
 		let txid = this.utxo.getTXID();
-		let texta = txid == null ? "?TX (OUTPUT ONLY)" : txid.substring(0, 7)+"..."+txid.substring(txid.length-7)+":"+this.utxo.getOutpoint();
-		text(texta, centerX, pos.y + (20/canvasStepRatioY()));
-		
-		textSize(14.5/canvasStepRatioY());
-		
+		let texta = txid == null ? "?TX (OUTPUT ONLY)" : txid.substring(0, 7) + "..." + txid.substring(txid.length - 7) + ":" + this.utxo.getOutpoint();
+		text(texta, centerX, pos.y + (20 / canvasStepRatioY()));
+
+		textSize(14.5 / canvasStepRatioY());
+
 		let ad = this.utxo.getAddress();
-		let textb = getAddressType(ad) + ": " + (ad.length <= 14 ? ad : ad.substring(0, 7)+"..."+ad.substring(ad.length-7));
-		text(textb, centerX, pos.y + (35/canvasStepRatioY()));
-		
-		textSize(13/canvasStepRatioY());
-		
+		let textb = getAddressType(ad) + ": " + (ad.length <= 14 ? ad : ad.substring(0, 7) + "..." + ad.substring(ad.length - 7));
+		text(textb, centerX, pos.y + (35 / canvasStepRatioY()));
+
+		textSize(13 / canvasStepRatioY());
+
 		if (this.utxo.status > 0) {
-			
-			text("SPENT #" + this.utxo.status, centerX, pos.y + ( 50/canvasStepRatioY() ));
-			
+
+			text("SPENT #" + this.utxo.status, centerX, pos.y + (50 / canvasStepRatioY()));
+
 		} else if (this.utxo.status == 0) {
-			
-			text("SPENT (MEMPOOL)", centerX, pos.y + ( 50/canvasStepRatioY() ));
-			
+
+			text("SPENT (MEMPOOL)", centerX, pos.y + (50 / canvasStepRatioY()));
+
 		} else if (this.utxo.status == -1) {
-			
-			text("AVAILABLE", centerX, pos.y + ( 50/canvasStepRatioY() ));
-			
+
+			text("AVAILABLE", centerX, pos.y + (50 / canvasStepRatioY()));
+
 		} else {
-			
-			text("NEW", centerX, pos.y + ( 50/canvasStepRatioY() ));
-			
+
+			text("NEW", centerX, pos.y + (50 / canvasStepRatioY()));
+
 		}
-		
-		textSize(20/canvasStepRatioY());
-		
+
+		textSize(20 / canvasStepRatioY());
+
 		let bor = this.utxo.remaindervalue;
-		text((bor ? "[" : "") + satsAsBitcoin(this.utxo.getValue()) + (bor ? "]" : ""), centerX, pos.y + yFractional-(16/canvasStepRatioY()));
-		
+		text((bor ? "[" : "") + satsAsBitcoin(this.utxo.getValue()) + (bor ? "]" : ""), centerX, pos.y + yFractional - (16 / canvasStepRatioY()));
+
 	}
-	
+
 	produceAltText(side, sideTabType) {
-		
+
 		if (sideTabType == SideTabType.DRAG_AND_DROP_PLUG) return null;
-		
+
 		if (side == ButtonSide.LEFT) {
 			return "Load creator transaction";
 		} else {
 			return "Load consumer transaction";
 		}
-		
+
 	}
-	
+
 	addButtonPushed(side) { //loadmoreinputs (side)
 		this.trySetState(side, PlugStackState.ALLDISPLAYED);
-		
+
 		let txid = this.utxo.txid;
-		
-		let centerP = this.getBounds().pos.y + this.getBounds().height/2;
-		
+
+		let centerP = this.getBounds().pos.y + this.getBounds().height / 2;
+
 		let c = this.getNewPlug(side, false);
-		
+
 		let promise = side == ButtonSide.LEFT ? getTransactionFull(txid) : this.utxo.getSpenderTransaction();
-		
+
 		promise.then((tx) => {
 
 			let txd = new TransactionDisplay(
@@ -1781,113 +1864,119 @@ class UTXODisplay extends InputOutputDisplayElement {
 					(this.getBounds().pos.x + ((side == ButtonSide.RIGHT) ? this.getBounds().width + 250 : -250)),
 					centerP
 				),
-				tx, 
+				tx,
 				MutabilityType.NONE
 			);
 
 			if (side == ButtonSide.LEFT) {
-				
+
 				c.attach(ButtonSide.RIGHT, this);
-				
+
 				txd.loadedoutputs.push(this.utxo);
-				
+
 				c.attach(ButtonSide.LEFT, txd);
-				
+
 				if (tx.outputs.length == 1) txd.trySetState(ButtonSide.RIGHT, PlugStackState.ALLDISPLAYED);
-				
+
 			} else {
-				
+
 				c.attach(ButtonSide.LEFT, this);
 
 				txd.loadedinputs.push(this.utxo);
-				
+
 				c.attach(ButtonSide.RIGHT, txd);
-				
+
 				if (tx.inputs.length == 1) txd.trySetState(ButtonSide.LEFT, PlugStackState.ALLDISPLAYED);
-				
+
 			}
-			
+
 			uielements.push(txd);
 
 		});
-	
+
 	}
-	
+
 	async onFocusedChild() {
-	
+
 		let utx = this.utxo;
 		await utx.loadAllData();
 		clearTable();
-		function getID() { return utx.getTXID() + ":" +  utx.getOutpoint(); }
+
+		function getID() {
+			return utx.getTXID() + ":" + utx.getOutpoint();
+		}
 		let idr = insertTableRow("ID", getID()); //TODO show some other id here when we have no parent
 		insertTableRow("Status", utx.status >= 0 ? "SPENT " + (utx.status == 0 ? "(MEMPOOL)" : "#" + utx.status) : (utx.status == -1 ? "AVAILABLE" : "NEW"));
-		function getValue() { return satsAsBitcoin(utx.getValue()); }
+
+		function getValue() {
+			return satsAsBitcoin(utx.getValue());
+		}
 		let valr;
-		
+
 		let addI;
 		let pk;
-		
+
 		function getSequenceDesc() {
-			
+
 			let nseq = utx.fullData.sequence;
 			let info = utx.fullData.isFlaggingDisableLocktimeSelf() ? "(Flagging disable nLocktime) " : "";
-			
+
 			if ((nseq & ((1 << 31) >>> 0)) != 0) {
-				
+
 				info += "(No relative locktime) ";
-				
+
 			} else {
-				
+
 				let ltra = nseq & 0x0000ffff;
-				
+
 				if ((nseq & ((1 << 22) >>> 0)) != 0) { //time-based
-					
-					let a = round((ltra*512)/600);
+
+					let a = round((ltra * 512) / 600);
 					info += " (When confirmed, not spendable for ABOUT " +
 						a + " block" + (a != 1 ? "s" : "") + " (BIP68)) ";
-				
+
 				} else { //block based
-					
+
 					let a = ltra;
 					if (a != 0) info += " (When confirmed, not spendable for EXACTLY " +
 						a + " block" + (a != 1 ? "s" : "") + " (BIP68)) ";
-					
+
 				}
-				
+
 			}
-			return info + (utx.fullData.isRBFSelf() ? "(RBF)" : ""); 
-			
+			return info + (utx.fullData.isRBFSelf() ? "(RBF)" : "");
+
 		}
-		
+
 		let ls;
 		let getLS;
 		let rs;
 		let getRS;
 		let sp;
-		
+
 		function updateStatic() {
 			idr.innerHTML = getID();
 			valr.innerHTML = getValue();
 			sp.innerHTML = utx.getSpenderTXID();
 		}
-		
+
 		function resetRS() {
-			
+
 			if (rs && getRS) {
 				rs.innerHTML = "";
 				rs.appendChild(getRS());
 			}
-			
+
 		}
-		
-		if(this.mutable == MutabilityType.NONE || this.mutable == MutabilityType.OUTPUTSONLY) {
-			
+
+		if (this.mutable == MutabilityType.NONE || this.mutable == MutabilityType.OUTPUTSONLY) {
+
 			let ad = utx.getAddress();
 			insertTableRow("Address", ad + " (" + getAddressType(ad) + ")");
-			
+
 		} else if (this.mutable == MutabilityType.ALL) {
 
-			addI = HTMLInput("Address", utx.getAddress(), true, function (e) {
+			addI = HTMLInput("Address", utx.getAddress(), true, function(e) {
 				try {
 					addI.value = addI.value.trim();
 					let t = addI.value.length == 0 ? "" : bitcoin.address.toOutputScript(addI.value).toString("hex");
@@ -1899,12 +1988,12 @@ class UTXODisplay extends InputOutputDisplayElement {
 						ls.innerHTML = "";
 						ls.appendChild(getLS());
 					}
-				} catch (ex) { 
+				} catch (ex) {
 					addI.classList.add("error");
 					print(ex);
 				}
 			}, "textarea");
-			
+
 			insertTableRowEV("Address", addI);
 
 			let drpOptions = ["Value", "Remainder"];
@@ -1920,15 +2009,15 @@ class UTXODisplay extends InputOutputDisplayElement {
 				option.text = drpOptions[i];
 				drp.appendChild(option);
 			}
-			
+
 			let vr2;
-			
+
 			drp.addEventListener("change", function(e) {
-				
+
 				let ind = drp.selectedIndex;
-				
+
 				vr2.innerHTML = "";
-				
+
 				if (ind == 0) { //Value
 					vr2.appendChild(joinElements([drp, hi2]));
 					utx.remaindervalue = undefined;
@@ -1937,10 +2026,12 @@ class UTXODisplay extends InputOutputDisplayElement {
 					utx.remaindervalue = true;
 					utx.value = 0;
 				}
-				
+
 			});
-			
-			let hi2 = numericDisplay(64, true, function() { return utx.getValue(); }, true, "Value (Satoshi)", function(n) {
+
+			let hi2 = numericDisplay(64, true, function() {
+				return utx.getValue();
+			}, true, "Value (Satoshi)", function(n) {
 				try {
 					utx.value = parseInt(n);
 					hi2.classList.remove("error");
@@ -1952,72 +2043,82 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 			});
 			vr2 = insertTableRowEV("Value (Satoshi) ", joinElements([drp, hi2]));
-	
+
 		}
-		
+
 		valr = insertTableRow("Value", getValue());
-			
+
 		if (this.mutable == MutabilityType.NONE) {
-			
+
 			let ld = textAsElement(getSequenceDesc());
-			let hi2 = numericDisplay(32, false, function() { return utx.fullData.sequence; });
+			let hi2 = numericDisplay(32, false, function() {
+				return utx.fullData.sequence;
+			});
 			let vr2 = insertTableRowEV("nSequence", joinElements([hi2, ld]));
-			
+
 		} else if (this.mutable == MutabilityType.OUTPUTSONLY || this.mutable == MutabilityType.ALL) {
-			
+
 			let ld = textAsElement(getSequenceDesc());
-			let hi2 = numericDisplay(32, false, function() { return utx.fullData.sequence; }, true, "nSequence", function(n) {
+			let hi2 = numericDisplay(32, false, function() {
+				return utx.fullData.sequence;
+			}, true, "nSequence", function(n) {
 				utx.fullData.sequence = parseInt(n);
 				ld.innerHTML = getSequenceDesc();
 				updateStatic();
 			});
 			let vr2 = insertTableRowEV("nSequence", joinElements([hi2, ld]));
-		
+
 		}
-		
+
 		let thiso = this;
-		
-		getRS = function () {
-			
+
+		getRS = function() {
+
 			let disSig = (thiso.mutable == MutabilityType.NONE);
 			let tb;
-			
+
 			function doUpdating(field, mutatorConditionerSS, mutatorConditionerW) {
-			
+
 				try {
 					utx.fullData.scriptsig = mutatorConditionerSS();
 					utx.fullData.witness = mutatorConditionerW();
 					field.classList.remove("error");
 					updateStatic();
-					if(addI) addI.value = utx.getAddress();
+					if (addI) addI.value = utx.getAddress();
 					tb.update();
-				} catch (ex) { 
+				} catch (ex) {
 					field.classList.add("error");
 					print(ex);
 				}
-				
+
 			}
-				
+
 			let tabs = [];
-			tabs.push(new Tab(function() { return true; }, function() {
-				
+			tabs.push(new Tab(function() {
+				return true;
+			}, function() {
+
 				let vet;
-				vet = HTMLInput("ScriptSig (ASM)", bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')), !disSig, function (e) {
-					doUpdating(vet, function () {
+				vet = HTMLInput("ScriptSig (ASM)", bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')), !disSig, function(e) {
+					doUpdating(vet, function() {
 						return vet.value.length == 0 ? "" : bitcoin.script.fromASM(vet.value.trim()).toString("hex");
-					}, function () { return utx.fullData.witness; });
+					}, function() {
+						return utx.fullData.witness;
+					});
 				}, "textarea");
-				
+
 				let vet2;
-				vet2 = HTMLInput("Witness (Seperate with empty lines)", utx.fullData.witness.map(x => x.length == 0 ? EMPTY_WITNESS_ITEM : x).join("\n\n"), !disSig, function (e) {
-					doUpdating(vet, function () { return utx.fullData.scriptsig; }, function () { 
+				vet2 = HTMLInput("Witness (Seperate with empty lines)", utx.fullData.witness.map(x => x.length == 0 ? EMPTY_WITNESS_ITEM : x).join("\n\n"), !disSig, function(e) {
+					doUpdating(vet, function() {
+						return utx.fullData.scriptsig;
+					}, function() {
 						let v = vet2.value.split("\n\n").map(x => x.replace("\n", ""));
 						let vset = [];
 						let rset = false;
 						//ensure buffer is valid
 						for (let i = 0; i < v.length; i++) {
 							if (v[i].length == 0) {
-								if (i == v.length-1) break;
+								if (i == v.length - 1) break;
 								v[i] = EMPTY_WITNESS_ITEM;
 								rset = true;
 							}
@@ -2031,7 +2132,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 						return vset;
 					});
 				}, "textarea");
-				
+
 				return joinElements([
 					textAsElement("ScriptSig (ASM): "),
 					document.createElement("br"),
@@ -2044,33 +2145,37 @@ class UTXODisplay extends InputOutputDisplayElement {
 					document.createElement("br"),
 					vet2
 				]);
-		
+
 			}, "Raw", function() {}));
-			
+
 			let atype = getAddressType(utx.getAddress());
-			
+
 			if (atype == "p2pkh") {
-				
+
 				tabs.push(new Tab(function() {
-				
+
 					let nwit = utx.fullData.witness ? utx.fullData.witness.length == 0 : true;
 					let tpushes = bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ").length;
 
 					return nwit && tpushes == 2;
-					
+
 				}, function() {
-					
-					let pkin = HTMLInput("Public key", bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[1], !disSig, function (e) {
+
+					let pkin = HTMLInput("Public key", bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[1], !disSig, function(e) {
 						doUpdating(pkin, function() {
 							return bitcoin.script.fromASM(bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[0] + " " + pkin.value);
-						}, function() { return utx.fullData.witness; });
+						}, function() {
+							return utx.fullData.witness;
+						});
 					}, "textarea");
-					let sigin = HTMLInput("Signature", bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[0], !disSig, function (e) {
+					let sigin = HTMLInput("Signature", bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[0], !disSig, function(e) {
 						doUpdating(sigin, function() {
 							return bitcoin.script.fromASM(sigin.value + " " + bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[1]);
-						}, function() { return utx.fullData.witness; });
+						}, function() {
+							return utx.fullData.witness;
+						});
 					}, "textarea");
-					
+
 					return joinElements([
 						textAsElement("Public key: "),
 						document.createElement("br"),
@@ -2081,42 +2186,46 @@ class UTXODisplay extends InputOutputDisplayElement {
 						textAsElement("Signature: "),
 						document.createElement("br"),
 						document.createElement("br"),
-						sigin,	
+						sigin,
 					]);
 
 				}, "p2pkh Spend", function() {
-					
+
 					utx.fullData.witness = [];
 					utx.fullData.scriptsig = "01000100";
 					updateStatic();
 					tb.update();
-					
+
 				}));
-				
+
 			} else if (atype == "p2wpkh") {
-				
+
 				tabs.push(new Tab(function() {
-				
+
 					let nsig = utx.fullData.scriptsig ? utx.fullData.scriptsig.length == 0 : true;
 					return nsig && utx.fullData.witness.length >= 1;
-					
+
 				}, function() {
-					
-					let pkin = HTMLInput("Public key", utx.fullData.witness[1], !disSig, function (e) {
-						doUpdating(pkin, function() { return utx.fullData.scriptsig; }, function() {
+
+					let pkin = HTMLInput("Public key", utx.fullData.witness[1], !disSig, function(e) {
+						doUpdating(pkin, function() {
+							return utx.fullData.scriptsig;
+						}, function() {
 							let newW = [...utx.fullData.witness];
 							newW[1] = pkin.value;
 							return newW;
 						});
 					}, "textarea");
-					let sigin = HTMLInput("Signature", utx.fullData.witness[0], !disSig, function (e) {
-						doUpdating(sigin, function() { return utx.fullData.scriptsig; }, function() {
+					let sigin = HTMLInput("Signature", utx.fullData.witness[0], !disSig, function(e) {
+						doUpdating(sigin, function() {
+							return utx.fullData.scriptsig;
+						}, function() {
 							let newW = [...utx.fullData.witness];
 							newW[0] = sigin.value;
 							return newW;
 						});
 					}, "textarea");
-					
+
 					return joinElements([
 						textAsElement("Public key: "),
 						document.createElement("br"),
@@ -2127,62 +2236,67 @@ class UTXODisplay extends InputOutputDisplayElement {
 						textAsElement("Signature: "),
 						document.createElement("br"),
 						document.createElement("br"),
-						sigin,	
+						sigin,
 					]);
 
 				}, "p2wpkh Spend", function() {
-					
+
 					utx.fullData.witness = ["00", "00"];
 					utx.fullData.scriptsig = "";
 					updateStatic();
 					tb.update();
-					
+
 				}));
-				
+
 			} else if (atype == "p2sh") {
-				
+
 				tabs.push(new Tab(function() {
-				
+
 					let nwit = utx.fullData.witness ? utx.fullData.witness.length == 0 : true;
 					let tpushes = bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ");
 
 					return nwit && tpushes.length >= 1 && tpushes[0].length >= 2;
-					
+
 				}, function() {
-					
+
 					let shout;
+
 					function getShout() {
 						let se = bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ");
 						return bitcoin.crypto.hash160(Buffer.from(se[se.length - 1], 'hex')).toString("hex");
 					}
-					
+
 					let i2 = bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex'));
 					let ini = i2.split(" ");
-					let ssin = HTMLInput("ScriptSig", i2.slice(0, -ini[ini.length - 1].length), !disSig, function (e) {
-						doUpdating(ssin, function() { 
-							
+					let ssin = HTMLInput("ScriptSig", i2.slice(0, -ini[ini.length - 1].length), !disSig, function(e) {
+						doUpdating(ssin, function() {
+
 							let vak = bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex'));
 							let vaks = vak.split(" ");
 							return bitcoin.script.fromASM(ssin.value + " " + vaks[vaks.length - 1]).toString("hex");
-							
-						}, function() { return utx.fullData.witness; });
+
+						}, function() {
+							return utx.fullData.witness;
+						});
 					}, "textarea");
-					let scrin = HTMLInput("Script", bitcoin.script.toASM(Buffer.from(ini[ini.length - 1], 'hex')), !disSig, function (e) {
-						doUpdating(scrin, function() { 
+					let scrin = HTMLInput("Script", bitcoin.script.toASM(Buffer.from(ini[ini.length - 1], 'hex')), !disSig, function(e) {
+						doUpdating(scrin, function() {
 
 							let sr = bitcoin.script.fromASM(scrin.value).toString("hex");
 							let vak = bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex'));
 							let vaks = vak.split(" ");
 							vaks[vaks.length - 1] = sr;
-							
+
 							return bitcoin.script.fromASM(vaks.join(" ")).toString("hex");
-							
-						}, function() { return utx.fullData.witness; });
+
+						}, function() {
+							return utx.fullData.witness;
+						});
 						shout.innerHTML = getShout();
 					}, "textarea");
-					
+
 					shout = textAsElement(getShout());
-					
+
 					return joinElements([
 						textAsElement("ScriptSig: "),
 						document.createElement("br"),
@@ -2193,50 +2307,53 @@ class UTXODisplay extends InputOutputDisplayElement {
 						textAsElement("Script: "),
 						document.createElement("br"),
 						document.createElement("br"),
-						scrin,	
+						scrin,
 						document.createElement("br"),
 						document.createElement("br"),
 						textAsElement("ScriptHash (Hash160): "),
 						document.createElement("br"),
 						document.createElement("br"),
-						shout	
+						shout
 					]);
 
 				}, "p2sh Spend", function() {
-					
+
 					utx.fullData.witness = [];
-					utx.fullData.scriptsig = "020100"; 
+					utx.fullData.scriptsig = "020100";
 					updateStatic();
 					tb.update();
-					
+
 				}));
-			
+
 			} else if (atype == "p2wsh") {
-				
+
 				tabs.push(new Tab(function() {
-				
+
 					let nsig = utx.fullData.scriptsig ? utx.fullData.scriptsig.length == 0 : true;
 					return nsig && utx.fullData.witness.length >= 1;
-					
+
 				}, function() {
 
 					let shout;
+
 					function getShout() {
 						return bitcoin.crypto.sha256(Buffer.from(utx.fullData.witness[utx.fullData.witness.length - 1], 'hex')).toString("hex");
 					}
-					
+
 					let ini = utx.fullData.witness;
 					let oini = ini.slice(0, -1);
-					let witin = HTMLInput("Witness (Seperate with empty lines)", oini.map(x => x.length == 0 ? EMPTY_WITNESS_ITEM : x).join("\n\n"), !disSig, function (e) {
-						doUpdating(witin, function() { return utx.fullData.scriptsig; }, function() { 
-							
+					let witin = HTMLInput("Witness (Seperate with empty lines)", oini.map(x => x.length == 0 ? EMPTY_WITNESS_ITEM : x).join("\n\n"), !disSig, function(e) {
+						doUpdating(witin, function() {
+							return utx.fullData.scriptsig;
+						}, function() {
+
 							let v = witin.value.split("\n\n").map(x => x.replace("\n", ""));
 							let vset = [];
 							let rset = false;
 							//ensure buffer is valid
 							for (let i = 0; i < v.length; i++) {
 								if (v[i].length == 0) {
-									if (i == v.length-1) break;
+									if (i == v.length - 1) break;
 									v[i] = EMPTY_WITNESS_ITEM;
 									rset = true;
 								}
@@ -2249,24 +2366,26 @@ class UTXODisplay extends InputOutputDisplayElement {
 							}
 							vset.push(utx.fullData.witness[utx.fullData.witness.length - 1]);
 							return vset;
-							
+
 						});
 					}, "textarea");
-					let scrin = HTMLInput("Script", bitcoin.script.toASM(Buffer.from(ini[ini.length - 1], 'hex')), !disSig, function (e) {
-						doUpdating(scrin, function() { return utx.fullData.scriptsig; }, function() { 
+					let scrin = HTMLInput("Script", bitcoin.script.toASM(Buffer.from(ini[ini.length - 1], 'hex')), !disSig, function(e) {
+						doUpdating(scrin, function() {
+							return utx.fullData.scriptsig;
+						}, function() {
 
 							let sr = bitcoin.script.fromASM(scrin.value).toString("hex");
 							let ret = utx.fullData.witness.slice(0, -1);
 							ret.push(sr);
-							
+
 							return ret;
-							
+
 						});
 						shout.innerHTML = getShout();
 					}, "textarea");
-					
+
 					shout = textAsElement(getShout());
-					
+
 					return joinElements([
 						textAsElement("Other witness items: "),
 						document.createElement("br"),
@@ -2277,7 +2396,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 						textAsElement("Script: "),
 						document.createElement("br"),
 						document.createElement("br"),
-						scrin,	
+						scrin,
 						document.createElement("br"),
 						document.createElement("br"),
 						textAsElement("ScriptHash (Hash160): "),
@@ -2287,85 +2406,90 @@ class UTXODisplay extends InputOutputDisplayElement {
 					]);
 
 				}, "p2wsh Spend", function() {
-					
+
 					utx.fullData.witness = ["0100"];
-					utx.fullData.scriptsig = ""; 
+					utx.fullData.scriptsig = "";
 					updateStatic();
 					tb.update();
-					
+
 				}));
-				
+
 			} else if (atype == "p2tr") {
-				
+
 				//TODO
-				
+
 			}
-			
+
 			let def = 0;
-			
+
 			for (let i = 0; i < tabs.length; i++) {
 				if (tabs[i].getEnabled()) def = i;
 			}
-			
+
 			tb = TabDisplay(tabs, def, disSig);
 			tb.update();
 			return tb.html
-			
+
 		}
-		
+
 		rs = insertTableRowEV("Redemption Data", getRS());
-		
+
 		getLS = function() {
-			
+
 			let tabDis = (thiso.mutable == MutabilityType.NONE || thiso.mutable == MutabilityType.OUTPUTSONLY);
-		
+
 			let tb;
-			
+
 			let tabs = [];
-			function getSPK() { return bitcoin.script.toASM(Buffer.from(utx.scriptpubkey, 'hex'), 'hex'); }
-			
+
+			function getSPK() {
+				return bitcoin.script.toASM(Buffer.from(utx.scriptpubkey, 'hex'), 'hex');
+			}
+
 			function doUpdating(field, mutatorConditioner) {
-			
+
 				try {
 					utx.scriptpubkey = mutatorConditioner();
 					field.classList.remove("error");
 					updateStatic();
-					if(addI) addI.value = utx.getAddress();
+					if (addI) addI.value = utx.getAddress();
 					tb.update();
 					resetRS();
-				} catch (ex) { 
+				} catch (ex) {
 					field.classList.add("error");
 					print(ex);
 				}
-				
+
 			}
-			
-			tabs.push(new Tab(function() { return true; }, function() {
-				
+
+			tabs.push(new Tab(function() {
+				return true;
+			}, function() {
+
 				let pkin;
-				pkin = HTMLInput("ScriptPubKey (ASM)", getSPK(), !tabDis, function (e) {
+				pkin = HTMLInput("ScriptPubKey (ASM)", getSPK(), !tabDis, function(e) {
 					doUpdating(pkin, function() {
 						return pkin.value.length == 0 ? "" : bitcoin.script.fromASM(pkin.value.trim()).toString("hex");
 					});
 				}, "textarea");
-				
+
 				return joinElements([
 					textAsElement("ScriptPubKey (ASM): "),
 					document.createElement("br"),
 					document.createElement("br"),
 					pkin
 				]);
-			
+
 			}, "Raw", function() {}));
 			tabs.push(new Tab(function() {
-			
+
 				let spk = utx.scriptpubkey;
 				//p2pkh detected
 				return (utx.scriptpubkey.startsWith("76a914") && utx.scriptpubkey.endsWith("88ac") && utx.scriptpubkey.length == 50);
-				
+
 			}, function() {
-				
-				let pkin = HTMLInput("", utx.scriptpubkey.substring(6, 46), !tabDis, function (e) {
+
+				let pkin = HTMLInput("", utx.scriptpubkey.substring(6, 46), !tabDis, function(e) {
 					doUpdating(pkin, function() {
 						if (pkin.value.length != 40) throw new Error();
 						return "76a914" + pkin.value.trim() + "88ac";
@@ -2379,23 +2503,23 @@ class UTXODisplay extends InputOutputDisplayElement {
 				]);
 
 			}, "p2pkh", function() {
-				
+
 				utx.scriptpubkey = "76a914000000000000000000000000000000000000000088ac";
 				updateStatic();
-				if(addI) addI.value = utx.getAddress();
+				if (addI) addI.value = utx.getAddress();
 				tb.update();
 				resetRS();
-				
+
 			}));
-			tabs.push(new Tab(function() { 
-			
+			tabs.push(new Tab(function() {
+
 				let spk = utx.scriptpubkey;
 				//p2wpkh detected
 				return (utx.scriptpubkey.startsWith("0014") && utx.scriptpubkey.length == 44);
-				
-			}, function() { 
-			
-				let pkin = HTMLInput("", utx.scriptpubkey.substring(4), !tabDis, function (e) {
+
+			}, function() {
+
+				let pkin = HTMLInput("", utx.scriptpubkey.substring(4), !tabDis, function(e) {
 					doUpdating(pkin, function() {
 						if (pkin.value.length != 40) throw new Error();
 						return "0014" + pkin.value.trim();
@@ -2407,25 +2531,25 @@ class UTXODisplay extends InputOutputDisplayElement {
 					document.createElement("br"),
 					pkin
 				]);
-			
+
 			}, "p2wpkh", function() {
-				
+
 				utx.scriptpubkey = "00140000000000000000000000000000000000000000";
 				updateStatic();
-				if(addI) addI.value = utx.getAddress();
+				if (addI) addI.value = utx.getAddress();
 				tb.update();
 				resetRS();
-				
+
 			}));
 			tabs.push(new Tab(function() {
-			
+
 				let spk = utx.scriptpubkey;
 				//p2sh detected
 				return (utx.scriptpubkey.startsWith("a914") && utx.scriptpubkey.endsWith("87") && utx.scriptpubkey.length == 46);
-				
+
 			}, function() {
-				
-				let pkin = HTMLInput("", utx.scriptpubkey.substring(4, 44), !tabDis, function (e) {
+
+				let pkin = HTMLInput("", utx.scriptpubkey.substring(4, 44), !tabDis, function(e) {
 					doUpdating(pkin, function() {
 						if (pkin.value.length != 40) throw new Error();
 						return "a914" + pkin.value.trim() + "87";
@@ -2437,25 +2561,25 @@ class UTXODisplay extends InputOutputDisplayElement {
 					document.createElement("br"),
 					pkin
 				]);
-				
+
 			}, "p2sh", function() {
-				
+
 				utx.scriptpubkey = "a914000000000000000000000000000000000000000087";
 				updateStatic();
-				if(addI) addI.value = utx.getAddress();
+				if (addI) addI.value = utx.getAddress();
 				tb.update();
 				resetRS();
-				
+
 			}));
-			tabs.push(new Tab(function() { 
-			
+			tabs.push(new Tab(function() {
+
 				let spk = utx.scriptpubkey;
 				//p2wsh detected
 				return (utx.scriptpubkey.startsWith("0020") && utx.scriptpubkey.length == 68);
-				
-			}, function() { 
-				
-				let pkin = HTMLInput("", utx.scriptpubkey.substring(4), !tabDis, function (e) {
+
+			}, function() {
+
+				let pkin = HTMLInput("", utx.scriptpubkey.substring(4), !tabDis, function(e) {
 					doUpdating(pkin, function() {
 						if (pkin.value.length != 64) throw new Error();
 						return "0020" + pkin.value.trim();
@@ -2467,266 +2591,283 @@ class UTXODisplay extends InputOutputDisplayElement {
 					document.createElement("br"),
 					pkin
 				]);
-			
+
 			}, "p2wsh", function() {
-				
+
 				utx.scriptpubkey = "00200000000000000000000000000000000000000000000000000000000000000000";
 				updateStatic();
-				if(addI) addI.value = utx.getAddress();
+				if (addI) addI.value = utx.getAddress();
 				tb.update();
 				resetRS();
-				
+
 			}));
-			
-			tabs.push(new Tab(function() { return false; }, function() { return joinElements([
-				textAsElement("Coming soon!") //TODO
-			]); }, "p2tr", function() {
-				
+
+			tabs.push(new Tab(function() {
+				return false;
+			}, function() {
+				return joinElements([
+					textAsElement("Coming soon!") //TODO
+				]);
+			}, "p2tr", function() {
+
 				//TODO
-				
+
 			}));
-			
+
 			let def = 0;
-			
+
 			for (let i = 0; i < tabs.length; i++) {
 				if (tabs[i].getEnabled()) def = i;
 			}
-			
+
 			tb = TabDisplay(tabs, def, tabDis);
 			tb.update();
 			return tb.html;
-			
+
 		}
-		
+
 		ls = insertTableRowEV("Locking Script", getLS());
-		
+
 		sp = insertTableRow("Spender", utx.getSpenderTXID());
-		
+
 	}
-	
+
 	getNewPlug(side, editable) {
 		return side == ButtonSide.LEFT ? new TransactionOutPlug(editable) : new TransactionInPlug(editable);
 	}
-	
+
 }
 
 class TransactionDisplay extends InputOutputDisplayElement {
-	
+
 	static rowHeight = 60;
 	static rowMargin = 10;
 	static rowWidth = 80;
-	
+
 	rowHeight = TransactionDisplay.rowHeight;
 	rowMargin = TransactionDisplay.rowMargin;
 	rowWidth = TransactionDisplay.rowWidth;
-	
+
 	constructor(centerPos, transaction, mutable) {
-		super(new BoundingBox(new Point(centerPos.x-200, centerPos.y-65), 400, 160), mutable, 80,
-			transaction.status > 0 ? COLOR_PALETTE_GREEN
-			: (
-				transaction.status == 0 ? COLOR_PALETTE_PURPLE
-				: COLOR_PALETTE_GRAY
+		super(new BoundingBox(new Point(centerPos.x - 200, centerPos.y - 65), 400, 160), mutable, 80,
+			transaction.status > 0 ? COLOR_PALETTE_GREEN :
+			(
+				transaction.status == 0 ? COLOR_PALETTE_PURPLE :
+				COLOR_PALETTE_GRAY
 			)
 		);
 		this.transaction = transaction;
-		
+
 		this.trySetState(ButtonSide.LEFT, PlugStackState.MISSING);
 		this.trySetState(ButtonSide.RIGHT, PlugStackState.MISSING);
-		
+
 		this.loadedinputs = [];
 		this.loadedoutputs = [];
-		
+
 	}
-	
+
 	betweenRender() {
-		
+
 		let bounds = this.getBounds();
 		let pos = cartToReal(bounds.pos);
-		
+
 		let xFractional = bounds.width / canvasStepRatioX();
-		let centerX = pos.x + xFractional*0.5;
+		let centerX = pos.x + xFractional * 0.5;
 		let yFractional = bounds.height / canvasStepRatioY();
-		
+
 		fill(100);
 		noStroke();
 		textAlign(CENTER, CENTER);
-		
-		textSize(45/canvasStepRatioY());
+
+		textSize(45 / canvasStepRatioY());
 		let btx = this.transaction.getBitcoin()
 		let txid = btx.getId();
-		text(txid.substring(0, 7)+"..."+txid.substring(txid.length-7), centerX, pos.y + (35/canvasStepRatioY()));
-		
-		textSize(20/canvasStepRatioY());
-		
+		text(txid.substring(0, 7) + "..." + txid.substring(txid.length - 7), centerX, pos.y + (35 / canvasStepRatioY()));
+
+		textSize(20 / canvasStepRatioY());
+
 		if (this.transaction.status > 0) {
-			
-			text("CONFIRMED #" + this.transaction.status, centerX, pos.y + ( 70/canvasStepRatioY() ));
-			
+
+			text("CONFIRMED #" + this.transaction.status, centerX, pos.y + (70 / canvasStepRatioY()));
+
 		} else if (this.transaction.status == 0) {
-			
-			text("MEMPOOL", centerX, pos.y + ( 70/canvasStepRatioY() ));
-			
+
+			text("MEMPOOL", centerX, pos.y + (70 / canvasStepRatioY()));
+
 		} else {
-			
-			text("NEW", centerX, pos.y + ( 70/canvasStepRatioY() ));
-			
+
+			text("NEW", centerX, pos.y + (70 / canvasStepRatioY()));
+
 		}
-		
-		textSize(30/canvasStepRatioY());
-		
-		text(satsAsBitcoin(this.transaction.getInAmt()) + " in", centerX, pos.y + yFractional-(60/canvasStepRatioY()));
-		
-		textSize(20/canvasStepRatioY());
-		
+
+		textSize(30 / canvasStepRatioY());
+
+		text(satsAsBitcoin(this.transaction.getInAmt()) + " in", centerX, pos.y + yFractional - (60 / canvasStepRatioY()));
+
+		textSize(20 / canvasStepRatioY());
+
 		let bor = !(this.transaction.customfee && this.transaction.customfee.rate);
-		let nfee = ((this.transaction.getInAmt() - this.transaction.getOutAmt())/(btx.weight()/4)).toFixed(2);
-		text((bor ? "[" : "") + nfee + "sat/vB" + (bor ? "]" : ""), centerX, pos.y + yFractional-(25/canvasStepRatioY()));
-		
+		let nfee = ((this.transaction.getInAmt() - this.transaction.getOutAmt()) / (btx.weight() / 4)).toFixed(2);
+		text((bor ? "[" : "") + nfee + "sat/vB" + (bor ? "]" : ""), centerX, pos.y + yFractional - (25 / canvasStepRatioY()));
+
 		textAlign(LEFT, CENTER);
-		text("VIN: " + this.transaction.inputs.length, pos.x + xFractional*0.04, pos.y + yFractional-(25/canvasStepRatioY()));
-		
+		text("VIN: " + this.transaction.inputs.length, pos.x + xFractional * 0.04, pos.y + yFractional - (25 / canvasStepRatioY()));
+
 		textAlign(RIGHT, CENTER);
-		text("VOUT: " + this.transaction.outputs.length, pos.x + xFractional*(1-0.04), pos.y + yFractional-(25/canvasStepRatioY()));
-		
+		text("VOUT: " + this.transaction.outputs.length, pos.x + xFractional * (1 - 0.04), pos.y + yFractional - (25 / canvasStepRatioY()));
+
 	}
-	
+
 	produceAltText(side, sideTabType) {
-		
+
 		if (sideTabType == SideTabType.DRAG_AND_DROP_PLUG) return null;
-		
+
 		if (side == ButtonSide.LEFT) {
 			return "Load all inputs...";
 		} else {
 			return "Load all outputs...";
 		}
-		
+
 	}
-	
+
 	addButtonPushed(side) { //loadmoreinputs (side)	
-		let centerP = this.getBounds().pos.y + this.getBounds().height/2;
-			
+		let centerP = this.getBounds().pos.y + this.getBounds().height / 2;
+
 		if (side == ButtonSide.LEFT) {
-			
-			for(let i = 0; i < this.transaction.inputs.length; i++) {
-				
+
+			for (let i = 0; i < this.transaction.inputs.length; i++) {
+
 				let curi = this.transaction.inputs[i];
 				if (!this.loadedinputs.some(e => (e.txid == curi.txid && e.outpoint == curi.outpoint))) {
-					
+
 					let c = this.getNewPlug(side, false);
-					
+
 					c.attach(ButtonSide.RIGHT, this);
-					
+
 					let utxd = new UTXODisplay(
 						new Point(
-							(this.getBounds().pos.x - this.transaction.inputs.length*20) - 100,
-							(centerP - (this.transaction.inputs.length/2)*150) + (i*150) + 30
+							(this.getBounds().pos.x - this.transaction.inputs.length * 20) - 100,
+							(centerP - (this.transaction.inputs.length / 2) * 150) + (i * 150) + 30
 						),
 						curi,
 						MutabilityType.NONE
 					);
 					c.attach(ButtonSide.LEFT, utxd);
 					utxd.trySetState(ButtonSide.RIGHT, PlugStackState.ALLDISPLAYED);
-					
+
 					uielements.push(utxd);
-					
+
 				}
 
 			}
-			
+
 			this.loadedinputs = [...this.transaction.inputs];
-			
+
 			let thiso = this;
 			//SORT LEFT PLUGS
-			this.leftPlugs.sort(function (a, b) { 
+			this.leftPlugs.sort(function(a, b) {
 
 				return thiso.transaction.inputs.indexOf(a.left.utxo) < thiso.transaction.inputs.indexOf(b.left.utxo) ? -1 : 1;
-			
+
 			});
 
 			this.trySetState(ButtonSide.LEFT, PlugStackState.ALLDISPLAYED);
-			
+
 		} else if (side == ButtonSide.RIGHT) {
-			
-			for(let i = 0; i < this.transaction.outputs.length; i++) {
-				
+
+			for (let i = 0; i < this.transaction.outputs.length; i++) {
+
 				let curi = this.transaction.outputs[i];
 				if (!this.loadedoutputs.some(e => (e.txid == curi.txid && e.outpoint == curi.outpoint))) {
-					
+
 					let c = this.getNewPlug(side, false);
-					
+
 					c.attach(ButtonSide.LEFT, this);
 
 					let utxd = new UTXODisplay(
 						new Point(
-							(this.getBounds().pos.x + this.getBounds().width + this.transaction.outputs.length*20) + 100,
-							(centerP - (this.transaction.outputs.length/2)*150) + (i*150) + 30
+							(this.getBounds().pos.x + this.getBounds().width + this.transaction.outputs.length * 20) + 100,
+							(centerP - (this.transaction.outputs.length / 2) * 150) + (i * 150) + 30
 						),
 						curi,
 						this.transaction.outputs[i].status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY
 					);
 					c.attach(ButtonSide.RIGHT, utxd);
 					utxd.trySetState(ButtonSide.LEFT, PlugStackState.ALLDISPLAYED);
-					
+
 					uielements.push(utxd);
-					
+
 				}
 
 			}
-			
+
 			this.loadedoutputs = [...this.transaction.outputs];
-			
+
 			let thiso = this;
 			//SORT RIGHT PLUGS
-			this.rightPlugs.sort(function (a, b) {
+			this.rightPlugs.sort(function(a, b) {
 
-				return a.right.utxo.getOutpoint() < b.right.utxo.getOutpoint() ? -1 : 1; 
-				
+				return a.right.utxo.getOutpoint() < b.right.utxo.getOutpoint() ? -1 : 1;
+
 			});
-			
+
 			this.trySetState(ButtonSide.RIGHT, PlugStackState.ALLDISPLAYED);
-			
+
 		}
-		
+
 	}
-	
+
 	async onFocusedChild() {
 
 		let tx = this.transaction;
 		clearTable();
-		function getTXID() { return tx.getBitcoin().getId(); }
+
+		function getTXID() {
+			return tx.getBitcoin().getId();
+		}
 		let tdr = insertTableRow("TXID", getTXID());
 		let rbf = false;
 		let nLd = true;
-		for (let i = 0; i < tx.inputs.length; i++) { if (tx.inputs[i].fullData.isRBFSelf()) { rbf = true; break; } }
-		for (let i = 0; i < tx.inputs.length; i++) { if (!tx.inputs[i].fullData.isFlaggingDisableLocktimeSelf()) { nLd = false; break; } }
+		for (let i = 0; i < tx.inputs.length; i++) {
+			if (tx.inputs[i].fullData.isRBFSelf()) {
+				rbf = true;
+				break;
+			}
+		}
+		for (let i = 0; i < tx.inputs.length; i++) {
+			if (!tx.inputs[i].fullData.isFlaggingDisableLocktimeSelf()) {
+				nLd = false;
+				break;
+			}
+		}
 		insertTableRow("Status", tx.status == -1 ? "NEW" : (tx.status == 0 ? "MEMPOOL" : "Confirmed #" + tx.status) + (rbf ? " (RBF)" : ""));
 		insertTableRow("Flow", tx.inputs.length + " in, " + tx.outputs.length + " out (" + satsAsBitcoin(tx.getInAmt()) + ", " + satsAsBitcoin(tx.getOutAmt()) + ")");
-		
+
 		let sdr;
 		let edr;
-		
+
 		async function getExport() {
-			
+
 			let pbt = await tx.getPsbt();
-			
+
 			return joinElements([
-			textAsElement("PSBT: "),
-			document.createElement("br"),
-			document.createElement("br"),
-			HTMLInput("", pbt.toBase64(), false, null, "textarea"),
-			document.createElement("br"),
-			document.createElement("br"),
-			textAsElement("Raw: "),
-			document.createElement("br"),
-			document.createElement("br"),
-			HTMLInput("", tx.getBitcoin().toHex(), false, null, "textarea")
+				textAsElement("PSBT: "),
+				document.createElement("br"),
+				document.createElement("br"),
+				HTMLInput("", pbt.toBase64(), false, null, "textarea"),
+				document.createElement("br"),
+				document.createElement("br"),
+				textAsElement("Raw: "),
+				document.createElement("br"),
+				document.createElement("br"),
+				HTMLInput("", tx.getBitcoin().toHex(), false, null, "textarea")
 			]);
 		}
-		
+
 		function getSizeDesc() {
-			return nFormatter(tx.getBitcoin().byteLength(true), 2) + "B total, " + nFormatter(tx.getBitcoin().weight()/4, 2) + "vB applied (" + nFormatter(tx.getBitcoin().weight(), 2) + "WU)";
+			return nFormatter(tx.getBitcoin().byteLength(true), 2) + "B total, " + nFormatter(tx.getBitcoin().weight() / 4, 2) + "vB applied (" + nFormatter(tx.getBitcoin().weight(), 2) + "WU)";
 		}
-		
+
 		async function updateStatic() {
 			tdr.innerHTML = getTXID();
 			if (sdr) sdr.innerHTML = getSizeDesc();
@@ -2735,45 +2876,57 @@ class TransactionDisplay extends InputOutputDisplayElement {
 				edr.appendChild(await getExport());
 			}
 		}
-		
-		function getVersionDesc() { return " (" + (tx.version <= 0 ? "Unknown" : (tx.version == 1 ? "Old" : (tx.version == 2 ? "BIP68, Conventional" : "BIP68, Unknown"))) + ")"; }
-		
-		function getLocktimeDesc() { return " (Not mineable until after " + (tx.locktime < 500000000 ? "block " + tx.locktime : "BIP113 11-block MTP " + tx.locktime) + ")" + (nLd ? " (DISABLED)" : ""); }
-		
-		function getFeerateDesc() {
-			return ((tx.getInAmt() - tx.getOutAmt())/(tx.getBitcoin().weight()/4)).toFixed(2) + "sat/vB";
+
+		function getVersionDesc() {
+			return " (" + (tx.version <= 0 ? "Unknown" : (tx.version == 1 ? "Old" : (tx.version == 2 ? "BIP68, Conventional" : "BIP68, Unknown"))) + ")";
 		}
-		
+
+		function getLocktimeDesc() {
+			return " (Not mineable until after " + (tx.locktime < 500000000 ? "block " + tx.locktime : "BIP113 11-block MTP " + tx.locktime) + ")" + (nLd ? " (DISABLED)" : "");
+		}
+
+		function getFeerateDesc() {
+			return ((tx.getInAmt() - tx.getOutAmt()) / (tx.getBitcoin().weight() / 4)).toFixed(2) + "sat/vB";
+		}
+
 		function getFeevalueDesc() {
 			return satsAsBitcoin((tx.getInAmt() - tx.getOutAmt()));
 		}
-		
-		if(this.mutable == MutabilityType.NONE) {
-			
+
+		if (this.mutable == MutabilityType.NONE) {
+
 			let vd = textAsElement(getVersionDesc());
-			let hi = numericDisplay(32, true, function() { return tx.version; });
+			let hi = numericDisplay(32, true, function() {
+				return tx.version;
+			});
 			let vr = insertTableRowEV("nVersion", joinElements([hi, vd]));
 			let ld = textAsElement(getLocktimeDesc());
-			let hi2 = numericDisplay(32, false, function() { return tx.locktime; });
+			let hi2 = numericDisplay(32, false, function() {
+				return tx.locktime;
+			});
 			let vr2 = insertTableRowEV("nLocktime", joinElements([hi2, ld]));
 			insertTableRow("Fee", getFeerateDesc() + " (" + getFeevalueDesc() + ")");
 
 		} else if (this.mutable == MutabilityType.ALL) {
 			let vd = textAsElement(getVersionDesc());
-			let hi = numericDisplay(32, true, function() { return tx.version; }, true, "nVersion", function(n) {
+			let hi = numericDisplay(32, true, function() {
+				return tx.version;
+			}, true, "nVersion", function(n) {
 				tx.version = parseInt(n);
 				vd.innerHTML = getVersionDesc();
 				updateStatic();
 			});
 			let vr = insertTableRowEV("nVersion", joinElements([hi, vd]));
 			let ld = textAsElement(getLocktimeDesc());
-			let hi2 = numericDisplay(32, false, function() { return tx.locktime; }, true, "nLocktime", function(n) {
+			let hi2 = numericDisplay(32, false, function() {
+				return tx.locktime;
+			}, true, "nLocktime", function(n) {
 				tx.locktime = parseInt(n);
 				ld.innerHTML = getLocktimeDesc();
 				updateStatic();
 			});
 			let vr2 = insertTableRowEV("nLocktime", joinElements([hi2, ld]));
-			
+
 			//Create array of options to be added
 			let drpOptions = ["Remainder (Default)", "Rate", "Value"];
 
@@ -2788,89 +2941,91 @@ class TransactionDisplay extends InputOutputDisplayElement {
 				option.text = drpOptions[i];
 				drp.appendChild(option);
 			}
-			
+
 			let r = insertTableRowEV("Fee", joinElements([drp, textAsElement(getFeerateDesc() + " (" + getFeevalueDesc() + ")")]));
-			
+
 			let va = null;
 			let ind = 0;
-			
+
 			let fc = function(e) {
-		
+
 				ind = drp.selectedIndex;
 				if (va) va.classList.remove("error");
-				
+
 				let des;
-				
+
 				if (ind == 0) { //Remainder (Default)
 					va = null;
 					tx.customfee = undefined;
 					des = getFeerateDesc() + " (" + getFeevalueDesc() + ")";
 				} else if (ind == 1) { //Rate
 					let rt;
-					if (tx.customfee && tx.customfee.rate) rt = tx.customfee.rate; else {
+					if (tx.customfee && tx.customfee.rate) rt = tx.customfee.rate;
+					else {
 						rt = 1;
 						tx.customfee = {
 							rate: rt
 						}
 					}
 					va = HTMLInput("Feerate (sat/vB)", rt, true, function(e) {
-						
+
 						let p = parseInt(va.value);
 						tx.customfee = {
 							rate: p ? p : 0
 						}
 						updateStatic();
-						
+
 					}, "number");
 					des = " (" + getFeevalueDesc() + ")";
 				} else if (ind == 2) { //Value
 					let rt;
-					if (tx.customfee && tx.customfee.value) rt = tx.customfee.value; else {
-						rt = ceil(tx.getBitcoin().weight()/4);
+					if (tx.customfee && tx.customfee.value) rt = tx.customfee.value;
+					else {
+						rt = ceil(tx.getBitcoin().weight() / 4);
 						tx.customfee = {
 							value: rt
 						}
 					}
 					va = HTMLInput("Value (bitcoins)", rt, true, function(e) {
-						
+
 						let p = parseInt(va.value);
 						tx.customfee = {
 							value: p ? p : 0
 						}
 						updateStatic();
-		
+
 					}, "number");
 					des = " (" + getFeerateDesc() + ")";
 				}
-				
+
 				let desc = textAsElement(des);
 
 				r.innerHTML = "";
 				r.appendChild(va ? joinElements([drp, va, desc]) : joinElements([drp, desc]));
 				updateStatic();
-				
+
 			};
-			
+
 			drp.addEventListener("change", fc);
-			
+
 			if (tx.customfee) {
 				if (tx.customfee.rate) drp.selectedIndex = 1;
 				else if (tx.customfee.value) drp.selectedIndex = 2;
 				fc();
 			}
-			
+
 		} else {}
-		
+
 		//virtualSize() is ceil(weight/4)
 		sdr = insertTableRow("Size", getSizeDesc());
 		edr = insertTableRowEV("Export", await getExport());
-		
+
 	}
-	
+
 	getNewPlug(side, editable) {
 		return side == ButtonSide.RIGHT ? new TransactionOutPlug(editable) : new TransactionInPlug(editable);
 	}
-	
+
 }
 
 //
@@ -2878,60 +3033,60 @@ class TransactionDisplay extends InputOutputDisplayElement {
 //
 
 function textAsElement(text) {
-	
+
 	let p1 = document.createElement("span");
 	p1.innerHTML = text;
-	
+
 	return p1;
-	
+
 }
 
 function joinElements(elements) {
-	
+
 	let span = document.createElement("span");
-	
+
 	for (let i = 0; i < elements.length; i++) {
-		
+
 		span.appendChild(elements[i]);
-		
+
 	}
-	
+
 	return span;
-	
+
 }
 
 function HTMLButton(label, behaviour) {
-	
+
 	let btn = document.createElement("button");
 	btn.textContent = label;
 	new p5.Element(btn).mouseClicked(behaviour);
 	return btn;
-	
+
 }
 
 function numericDisplay(bits, signed = false, getvalue, editable = false, label, onupdate) {
-	
+
 	let ind = 0;
-	
+
 	let mini;
 	let maxi;
-	
+
 	let tSetter;
 	let va;
-	
+
 	if (editable) {
 		let hi = HTMLInput(label, getvalue(), true, function(e) {
-		
+
 			let v = hi.value;
-			
+
 			if (v.length == 0) {
 				onupdate(0);
 				hi.classList.remove("error");
 				return;
 			}
-			
+
 			let num;
-			
+
 			if (ind == 0) { //decimal
 				num = v;
 			} else if (ind == 1) { //hex (little endian)
@@ -2947,42 +3102,48 @@ function numericDisplay(bits, signed = false, getvalue, editable = false, label,
 				num = parseInt(v, 2);
 				if (signed) num = ~~num;
 			}
-			
+
 			if (isNaN(num) || num != floor(num)) {
 				hi.classList.add("error");
 				return;
 			}
-			
+
 			if (num >= mini && num <= maxi) {
 				onupdate(num);
-				hi.classList.remove("error");			
+				hi.classList.remove("error");
 			} else {
 				hi.classList.add("error");
 			}
-		
-		}, "text", function () { if (hi.value.length == 0) hi.value = 0; });
-		
-		tSetter = function(t) { hi.value = t; };
+
+		}, "text", function() {
+			if (hi.value.length == 0) hi.value = 0;
+		});
+
+		tSetter = function(t) {
+			hi.value = t;
+		};
 		va = hi;
 	} else {
 		let sp = textAsElement(getvalue());
-		tSetter = function(t) { sp.innerHTML = t; };
+		tSetter = function(t) {
+			sp.innerHTML = t;
+		};
 		va = sp;
 	}
-	
-	let n1 = 2**bits;
+
+	let n1 = 2 ** bits;
 	if (signed) {
-		
-		mini = (-n1/2);
-		maxi = (n1/2) - 1;
-		
+
+		mini = (-n1 / 2);
+		maxi = (n1 / 2) - 1;
+
 	} else {
-		
+
 		mini = 0;
-		maxi = n1-1;
-		
+		maxi = n1 - 1;
+
 	}
-	
+
 	//Create array of options to be added
 	let drpOptions = ["Decimal", "Hex (Little-Endian)", "Hex (Big-Endian)", "Binary (Little-Endian)", "Binary (Big-Endian)"];
 
@@ -2997,40 +3158,40 @@ function numericDisplay(bits, signed = false, getvalue, editable = false, label,
 		option.text = drpOptions[i];
 		drp.appendChild(option);
 	}
-	
+
 	function pad(n, width, z) {
 		z = z || '0';
 		n = n + '';
 		return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
 	}
-	
+
 	drp.addEventListener("change", function(e) {
-		
+
 		ind = drp.selectedIndex;
 		va.classList.remove("error");
-		
+
 		let v = getvalue();
-		
+
 		if (ind == 0) { //decimal
 			tSetter(v);
 		} else if (ind == 1) { //hex (little endian)
-			tSetter(pad((parseInt(v)).toString(16), bits/4).split(/(?=(?:..)*$)/).reverse().join(""));
+			tSetter(pad((parseInt(v)).toString(16), bits / 4).split(/(?=(?:..)*$)/).reverse().join(""));
 		} else if (ind == 2) { //hex (big endian)
-			tSetter(pad((parseInt(v)).toString(16), bits/4));
+			tSetter(pad((parseInt(v)).toString(16), bits / 4));
 		} else if (ind == 3) { //binary (little endian)
 			tSetter(pad((parseInt(v)).toString(2), bits).split("").reverse().join(""));
 		} else if (ind == 4) { //binary (big endian)
 			tSetter(pad((parseInt(v)).toString(2), bits));
 		}
-		
+
 	});
-	
+
 	return joinElements([drp, va]);
-	
+
 }
 
 function HTMLInput(label, initial, enabled = false, changedBehaviour = null, type = "text", unfocus = null, enterBehaviour = null) {
-	
+
 	let inp;
 
 	if (type == "textarea") {
@@ -3041,130 +3202,130 @@ function HTMLInput(label, initial, enabled = false, changedBehaviour = null, typ
 		inp.type = type;
 		inp.style.width = "280px";
 	}
-	
+
 	inp.placeholder = label;
 	inp.value = initial;
 	inp.disabled = !enabled;
 
 	if (type == "textarea") {
-		setTimeout(function () {
+		setTimeout(function() {
 			inp.style.height = inp.scrollHeight + "px";
 		}, 1);
 	}
-	
+
 	if (enabled) {
-			
-		inp.addEventListener('keyup', function (e) {
-		
+
+		inp.addEventListener('keyup', function(e) {
+
 			if (e.key === 'Enter') {
 				if (enterBehaviour) enterBehaviour(e);
-			} 
+			}
 			changedBehaviour(e);
-			
+
 		});
-		if (unfocus) inp.addEventListener('focusout', function (e) {
+		if (unfocus) inp.addEventListener('focusout', function(e) {
 			unfocus();
 		});
-		
+
 	}
 
 	return inp;
-	
+
 }
 
 class Tab {
-	
+
 	constructor(getEnabled, content, name, forcebehv) {
 		this.getEnabled = getEnabled;
 		this.content = content;
 		this.name = name;
 		this.forcebehv = forcebehv;
 	}
-	
+
 }
 
 function TabDisplay(tabs, defaultInd, disabled) {
-	
+
 	let outerDiv = document.createElement("div");
-	
+
 	let tabsArea = document.createElement("div");
 	let contentArea = document.createElement("div");
-	
+
 	outerDiv.appendChild(tabsArea);
 	outerDiv.appendChild(document.createElement("br"));
 	outerDiv.appendChild(contentArea);
-	
+
 	let btns = [];
-	
+
 	let update;
-	
+
 	for (let i = 0; i < tabs.length; i++) {
-		
+
 		let cTab = tabs[i];
-		
+
 		let onClickT = function() {
-			
+
 			contentArea.innerHTML = "";
 			if (cTab.getEnabled()) {
-				
+
 				contentArea.appendChild(cTab.content());
-				
+
 			} else {
-				
+
 				if (disabled) {
-				
+
 					contentArea.appendChild(textAsElement("Type not detected. (Incompatible)"));
-				
+
 				} else {
-					
+
 					contentArea.appendChild(joinElements([textAsElement("Type not compatible with current data. By forcing the data to this type, the current data will be erased. "), HTMLButton("Force", function() {
-						
+
 						cTab.forcebehv();
 						update();
 						contentArea.innerHTML = "";
 						contentArea.appendChild(cTab.content());
-						
+
 					})]));
-					
+
 				}
-				
+
 			}
 
 			for (let j = 0; j < btns.length; j++) {
-			
-				btns[j].disabled = j == i ? true : false; 
-			
+
+				btns[j].disabled = j == i ? true : false;
+
 			}
-			
+
 		}
-		
+
 		let cbtn = HTMLButton(cTab.name, onClickT);
 		btns.push(cbtn);
 		tabsArea.appendChild(cbtn);
-		
+
 		if (defaultInd == i) {
 			onClickT();
 		}
-		
+
 	}
-	
+
 	update = function() {
-			
+
 		for (let i = 0; i < tabs.length; i++) {
-			
+
 			btns[i].style.backgroundColor = tabs[i].getEnabled() ? "" : "red";
-			
+
 		}
-			
+
 	};
-	
+
 	return {
-		
+
 		html: outerDiv,
 		tabs: tabsArea,
 		content: contentArea,
 		update: update
-	
+
 	};
-	
+
 }
