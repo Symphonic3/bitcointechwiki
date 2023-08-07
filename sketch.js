@@ -154,7 +154,8 @@ function setup() {
 			}).then((tx) => {
 
 				uielements.push(new TransactionDisplay(new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)), tx, MutabilityType.NONE));
-
+				inp.elt.classList.remove("error");
+				
 			});
 
 
@@ -164,7 +165,17 @@ function setup() {
 				inp.elt.classList.add("error");
 			}).then((utxo) => {
 
-				uielements.push(new UTXODisplay(new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2) + (canvasSize.y / 30 * spawns++), utxo, utxo.status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY));
+				uielements.push(
+					new UTXODisplay(
+						new Point(
+							canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns),
+							canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)
+						), 
+						utxo, 
+						utxo.status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY
+					)
+				);
+				inp.elt.classList.remove("error");
 
 			});
 
@@ -197,6 +208,8 @@ function setup() {
 				}
 
 				spawns++;
+				
+				inp.elt.classList.remove("error");
 
 			});
 
