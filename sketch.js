@@ -571,26 +571,31 @@ class Transaction {
 	  
 	  for (let i = 0; i < this.inputs.length; i++) {
 		  
-		  psbt.updateInput(i, {
+		  let txe = (await this.inputs[i].getTransaction());
+		  if (txe.inputs.length != 0) {
 			  
-			  nonWitnessUtxo: (await this.inputs[i].getTransaction()).getBitcoin().toBuffer(),
-			  redeemScript: Buffer.from(this.inputs[i].scriptpubkey, 'hex')
-			  
-		  });
-		  if (this.inputs[i].fullData.scriptsig || (this.inputs[i].fullData.witness && this.inputs[i].fullData.witness.length > 0)) {
-			  
-			  let thiso = this;
-			  psbt.finalizeInput(i, function() {
+			  psbt.updateInput(i, {
 				  
-				  return {
-					  
-					  finalScriptSig: thiso.inputs[i].fullData.scriptsig ? Buffer.from(thiso.inputs[i].fullData.scriptsig, 'hex') : Buffer.from("", 'hex'),
-					  finalScriptWitness: (thiso.inputs[i].fullData.witness && thiso.inputs[i].fullData.witness.length > 0) ? bitcoin.Psbt.witnessStackToScriptWitness(thiso.inputs[i].fullData.witness.map(x => Buffer.from(x, 'hex'))) : undefined
-					  
-				  };
+				  nonWitnessUtxo: txe.getBitcoin().toBuffer(),
+				  redeemScript: Buffer.from(this.inputs[i].scriptpubkey, 'hex')
 				  
 			  });
+			  if (this.inputs[i].fullData.scriptsig || (this.inputs[i].fullData.witness && this.inputs[i].fullData.witness.length > 0)) {
+				  
+				  let thiso = this;
+				  psbt.finalizeInput(i, function() {
+					  
+					  return {
+						  
+						  finalScriptSig: thiso.inputs[i].fullData.scriptsig ? Buffer.from(thiso.inputs[i].fullData.scriptsig, 'hex') : Buffer.from("", 'hex'),
+						  finalScriptWitness: (thiso.inputs[i].fullData.witness && thiso.inputs[i].fullData.witness.length > 0) ? bitcoin.Psbt.witnessStackToScriptWitness(thiso.inputs[i].fullData.witness.map(x => Buffer.from(x, 'hex'))) : undefined
+						  
+					  };
+					  
+				  });
 
+			  }
+			  
 		  }
 		  
 	  }
