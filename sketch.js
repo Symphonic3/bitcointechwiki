@@ -3005,7 +3005,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 							value: rt
 						}
 					}
-					va = HTMLInput("Value (bitcoins)", rt, true, function(e) {
+					va = HTMLInput("Value (sats)", rt, true, function(e) {
 
 						let p = parseInt(va.value);
 						tx.customfee = {
