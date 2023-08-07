@@ -16,6 +16,55 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+let chainparams = [
+	
+	{
+		id: "Mainnet",
+		symbol: "\u20bf",
+		p2shprefix: "3",
+		bech: "bc",
+		p2pkhprefixes: ["1"],
+		bnet: bitcoin.networks.bitcoin,
+		endpoint: "mempool.space",
+		endpointnetwork: "mainnet"
+	},
+	{
+		id: "Testnet",
+		symbol: "testnet",
+		p2shprefix: "2",
+		bech: "tb",
+		p2pkhprefixes: ["m","n"],
+		bnet: bitcoin.networks.testnet,
+		endpoint: "mempool.space",
+		endpointnetwork: "testnet"
+		
+	},
+	{
+		id: "Signet",
+		symbol: "signet",
+		p2shprefix: "2",
+		bech: "tb",
+		p2pkhprefixes: ["m","n"],
+		bnet: bitcoin.networks.testnet,
+		endpoint: "mempool.space",
+		endpointnetwork: "signet"
+		
+	},
+	/*{
+		id: "Regtest",
+		symbol: "regtest",
+		p2shprefix: "2",
+		bech: "tb",
+		p2pkhprefixes: ["m","n"],
+		bnet: bitcoin.networks.regtest,
+		endpoint: YOUR REGTEST MEMPOOL.SPACE NODE,
+		endpointnetwork: "testnet"
+		
+	}*/
+
+];
+
+let selchain = chainparams[0];
 
 Array.prototype.remove = function() {
 	let pn = false;
@@ -176,7 +225,7 @@ function setup() {
 	let utxoaddressbutton = new p5.Element(document.getElementById("addutxoaddress"));
 	utxoaddressbutton.mouseClicked(function() {
 		let utx = new UTXO("", 0, -2, null, null, null, new UTXOFullData(), null, null, false, false);
-		utx.scriptpubkey = bitcoin.address.toOutputScript(prompt("Enter address:")).toString("hex");
+		utx.scriptpubkey = bitcoin.address.toOutputScript(prompt("Enter address:"), selchain.bnet).toString("hex");
 		let utxd = new UTXODisplay(
 			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
 			utx,
@@ -195,6 +244,31 @@ function setup() {
 		);
 		uielements.push(utxd);
 	});
+	
+	let chainselector = document.getElementById("chainselector");
+	chainselector.style.width = "90px";
+
+	for (let i = 0; i < chainparams.length; i++) {
+		let option = document.createElement("option");
+		option.value = chainparams[i].id;
+		option.text = chainparams[i].id;
+		chainselector.appendChild(option);
+	}
+
+	chainselector.addEventListener("change", function(e) {
+
+		ind = chainselector.selectedIndex;
+		
+		uielements = [];
+		selectedItem = null;
+		drag = null;
+		hoverElement = null;
+		clearTable();
+		
+		selchain = chainparams[ind];
+
+	});
+	
 }
 
 //
@@ -399,7 +473,7 @@ function draw() {
 	textSize(200 / canvasStepRatioX());
 	textAlign(CENTER, CENTER);
 	let pp = cartToReal(new Point(0, 0));
-	text("\u20bf", pp.x, pp.y);
+	text(selchain.symbol, pp.x, pp.y);
 
 	//use a seperate layer for this bezier line drawing and do it in a different place?
 	for (let i = 0; i < uielements.length; i++) {
@@ -578,7 +652,7 @@ class Transaction {
 	async getPsbt() {
 
 		let btx = this.getBitcoin();
-		let psbt = new bitcoin.Psbt();
+		let psbt = new bitcoin.Psbt({network: selchain.bnet});
 
 		psbt.setVersion(this.version);
 		psbt.setLocktime(this.locktime);
@@ -608,8 +682,7 @@ class Transaction {
 
 				psbt.updateInput(i, {
 
-					nonWitnessUtxo: txe.getBitcoin().toBuffer(),
-					redeemScript: Buffer.from(this.inputs[i].scriptpubkey, 'hex')
+					nonWitnessUtxo: txe.getBitcoin().toBuffer()
 
 				});
 				if (this.inputs[i].fullData.scriptsig || (this.inputs[i].fullData.witness && this.inputs[i].fullData.witness.length > 0)) {
@@ -791,7 +864,7 @@ class UTXO {
 
 		try {
 
-			return bitcoin.address.fromOutputScript(raw, bitcoin.networks.bitcoin);
+			return bitcoin.address.fromOutputScript(raw, selchain.bnet);
 
 		} catch (e) {
 
@@ -814,7 +887,8 @@ async function getAddressUtxos(address) { //TODO bad, should not just load every
 			addresses
 		}
 	} = mempoolJS({
-		hostname: 'mempool.space'
+		hostname: selchain.endpoint,
+		network: selchain.endpointnetwork
 	});
 
 	let utxs = await addresses.getAddressTxsUtxo({
@@ -850,7 +924,8 @@ async function getTransactionFull(txid) {
 			transactions
 		}
 	} = mempoolJS({
-		hostname: 'mempool.space'
+		hostname: selchain.endpoint,
+		network: selchain.endpointnetwork
 	});
 
 	let [tx, outsp] = await Promise.all([
@@ -901,7 +976,8 @@ async function getTransactionOnlyData(txid) {
 			transactions
 		}
 	} = mempoolJS({
-		hostname: 'mempool.space'
+		hostname: selchain.endpoint,
+		network: selchain.endpointnetwork
 	});
 
 	return await transactions.getTx({
@@ -983,12 +1059,12 @@ function satsAsBitcoin(n) {
 }
 
 function getAddressType(address) {
-
-	if (address.length >= 26 && address.length <= 35 && address.startsWith("1")) return "p2pkh";
-	if (address.length >= 26 && address.length <= 35 && address.startsWith("3")) return "p2sh";
-	if (address.length == 62 && address.startsWith("bc1q")) return "p2wsh";
-	if (address.length == 42 && address.startsWith("bc1q")) return "p2wpkh";
-	if (address.startsWith("bc1p")) return "p2tr";
+	
+	if (address.length >= 26 && address.length <= 35 && selchain.p2pkhprefixes.includes(address.substring(0, 1))) return "p2pkh";
+	if (address.length >= 26 && address.length <= 35 && address.startsWith(selchain.p2shprefix)) return "p2sh";
+	if (address.length == 62 && address.startsWith(selchain.bech + "1q")) return "p2wsh";
+	if (address.length == 42 && address.startsWith(selchain.bech + "1q")) return "p2wpkh";
+	if (address.startsWith(selchain.bech + "1p")) return "p2tr";
 	return "Unknown";
 
 }
@@ -1998,7 +2074,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 			addI = HTMLInput("Address", utx.getAddress(), true, function(e) {
 				try {
 					addI.value = addI.value.trim();
-					let t = addI.value.length == 0 ? "" : bitcoin.address.toOutputScript(addI.value).toString("hex");
+					let t = addI.value.length == 0 ? "" : bitcoin.address.toOutputScript(addI.value, selchain.bnet).toString("hex");
 					utx.scriptpubkey = t;
 					addI.classList.remove("error");
 					updateStatic();
