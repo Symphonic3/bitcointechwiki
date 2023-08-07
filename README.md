@@ -4,6 +4,14 @@ A modern resource for bitcoin information, and a second-generation, visual trans
 
 [![Bitcointech.wiki | A New Bitcoin Transaction Editor | By Symphonic](http://img.youtube.com/vi/YIXhf_eciA4/0.jpg)](http://www.youtube.com/watch?v=YIXhf_eciA4 "Bitcointech.wiki | A New Bitcoin Transaction Editor | By Symphonic")
 
+# Use trustlessly
+
+In order to use this tool trustlessly and securely, you need to download at a minimum editor.html and sketch.js from the project files.
+
+You can then edit the chainparams array in sketch.js to point to your self-hosted [mempoo.space](https://github.com/mempool/mempool) instance, which should be connected to your own node.
+
+This can also be done to allow the tool to be used with a regtest chain, but you will need to configure mempool.space to point to that chain, and the chainparams will likely be different.
+
 # License
 
 This software is distributed under the GNU AGPLv3 license. For more information, see [LICENSE](LICENSE)
