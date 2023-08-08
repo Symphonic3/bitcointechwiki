@@ -820,6 +820,14 @@ class UTXO {
 							nfee = cf.rate * (tx.getBitcoin(false).weight() / 4)
 						}
 						nfee = ceil(nfee);
+						let sthis = false;
+						for (let i = 0; i < tx.outputs.length; i++) {
+							if (tx.outputs[i] == this){
+								sthis = true;
+								continue;
+							}
+							if (sthis && tx.outputs[i].remaindervalue) return 0;
+						}
 						let nothers = tx.getInAmt() - tx.getOutAmt(this);
 						let fret = nothers - nfee;
 						return max(fret, 0);
