@@ -2226,10 +2226,10 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 				let vet2;
 				vet2 = HTMLInput("Witness (Seperate with empty lines)", utx.fullData.witness.map(x => x.length == 0 ? EMPTY_WITNESS_ITEM : x).join("\n\n"), !disSig, function(e) {
-					doUpdating(vet, function() {
+					doUpdating(vet2, function() {
 						return utx.fullData.scriptsig;
 					}, function() {
-						let v = vet2.value.split("\n\n").map(x => x.replace("\n", ""));
+						let v = vet2.value.split("\n\n").map(x => x.replace("\n", "").trim());
 						let vset = [];
 						let rset = false;
 						//ensure buffer is valid
@@ -2280,14 +2280,14 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 					let pkin = HTMLInput("Public key", bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[1], !disSig, function(e) {
 						doUpdating(pkin, function() {
-							return bitcoin.script.fromASM(bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[0] + " " + pkin.value);
+							return bitcoin.script.fromASM(bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[0] + " " + pkin.value.trim());
 						}, function() {
 							return utx.fullData.witness;
 						});
 					}, "textarea");
 					let sigin = HTMLInput("Signature", bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[0], !disSig, function(e) {
 						doUpdating(sigin, function() {
-							return bitcoin.script.fromASM(sigin.value + " " + bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[1]);
+							return bitcoin.script.fromASM(sigin.value.trim() + " " + bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex')).split(" ")[1]);
 						}, function() {
 							return utx.fullData.witness;
 						});
@@ -2329,7 +2329,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 							return utx.fullData.scriptsig;
 						}, function() {
 							let newW = [...utx.fullData.witness];
-							newW[1] = pkin.value;
+							newW[1] = pkin.value.trim();
 							return newW;
 						});
 					}, "textarea");
@@ -2338,7 +2338,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 							return utx.fullData.scriptsig;
 						}, function() {
 							let newW = [...utx.fullData.witness];
-							newW[0] = sigin.value;
+							newW[0] = sigin.value.trim();
 							return newW;
 						});
 					}, "textarea");
@@ -2390,7 +2390,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 							let vak = bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex'));
 							let vaks = vak.split(" ");
-							return bitcoin.script.fromASM(ssin.value + " " + vaks[vaks.length - 1]).toString("hex");
+							return bitcoin.script.fromASM(ssin.value.trim() + " " + vaks[vaks.length - 1]).toString("hex");
 
 						}, function() {
 							return utx.fullData.witness;
@@ -2399,7 +2399,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 					let scrin = HTMLInput("Script", bitcoin.script.toASM(Buffer.from(ini[ini.length - 1], 'hex')), !disSig, function(e) {
 						doUpdating(scrin, function() {
 
-							let sr = bitcoin.script.fromASM(scrin.value).toString("hex");
+							let sr = bitcoin.script.fromASM(scrin.value.trim()).toString("hex");
 							let vak = bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, 'hex'));
 							let vaks = vak.split(" ");
 							vaks[vaks.length - 1] = sr;
@@ -2464,7 +2464,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 							return utx.fullData.scriptsig;
 						}, function() {
 
-							let v = witin.value.split("\n\n").map(x => x.replace("\n", ""));
+							let v = witin.value.split("\n\n").map(x => x.replace("\n", "").trim());
 							let vset = [];
 							let rset = false;
 							//ensure buffer is valid
@@ -2491,7 +2491,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 							return utx.fullData.scriptsig;
 						}, function() {
 
-							let sr = bitcoin.script.fromASM(scrin.value).toString("hex");
+							let sr = bitcoin.script.fromASM(scrin.value.trim()).toString("hex");
 							let ret = utx.fullData.witness.slice(0, -1);
 							ret.push(sr);
 
@@ -2608,7 +2608,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 				let pkin = HTMLInput("", utx.scriptpubkey.substring(6, 46), !tabDis, function(e) {
 					doUpdating(pkin, function() {
-						if (pkin.value.length != 40) throw new Error();
+						if (pkin.value.trim().length != 40) throw new Error();
 						return "76a914" + pkin.value.trim() + "88ac";
 					});
 				}, "textarea");
@@ -2638,7 +2638,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 				let pkin = HTMLInput("", utx.scriptpubkey.substring(4), !tabDis, function(e) {
 					doUpdating(pkin, function() {
-						if (pkin.value.length != 40) throw new Error();
+						if (pkin.value.trim().length != 40) throw new Error();
 						return "0014" + pkin.value.trim();
 					});
 				}, "textarea");
@@ -2698,7 +2698,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 				let pkin = HTMLInput("", utx.scriptpubkey.substring(4), !tabDis, function(e) {
 					doUpdating(pkin, function() {
-						if (pkin.value.length != 64) throw new Error();
+						if (pkin.value.trim().length != 64) throw new Error();
 						return "0020" + pkin.value.trim();
 					});
 				}, "textarea");
