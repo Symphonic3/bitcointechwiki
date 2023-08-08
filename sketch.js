@@ -2126,10 +2126,12 @@ class UTXODisplay extends InputOutputDisplayElement {
 				option.text = drpOptions[i];
 				drp.appendChild(option);
 			}
-
+			
+			drp.selectedIndex = utx.remaindervalue ? 1 : 0;
+			
 			let vr2;
-
-			drp.addEventListener("change", function(e) {
+			
+			let ocdr = function(e) {
 
 				let ind = drp.selectedIndex;
 
@@ -2144,7 +2146,9 @@ class UTXODisplay extends InputOutputDisplayElement {
 					utx.value = 0;
 				}
 
-			});
+			};
+
+			drp.addEventListener("change", ocdr);
 
 			let hi2 = numericDisplay(64, true, function() {
 				return utx.getValue();
@@ -2160,6 +2164,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 			});
 			vr2 = insertTableRowEV("Value (Satoshi) ", joinElements([drp, hi2]));
+			ocdr();
 
 		}
 
