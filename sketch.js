@@ -689,7 +689,8 @@ class Transaction {
 		}
 
 		for (let i = 0; i < this.inputs.length; i++) {
-
+			
+			if (this.inputs[i].iscoinbase) return "!COINBASE!";
 			let txe = (await this.inputs[i].getTransaction());
 			if (txe.inputs.length != 0) {
 
@@ -718,7 +719,7 @@ class Transaction {
 
 		}
 
-		return psbt;
+		return psbt.toBase64();
 
 	}
 
@@ -767,7 +768,7 @@ class UTXOFullData {
 
 class UTXO {
 
-	constructor(scriptpubkey, value, status, txid = null, outpoint = null, spendertxid = null, fullData = null, tx = null, spendertx = null, loadablespender = true, loadablecreator = true) {
+	constructor(scriptpubkey, value, status, txid = null, outpoint = null, spendertxid = null, fullData = null, tx = null, spendertx = null, loadablespender = true, iscoinbase = false) {
 
 		this.scriptpubkey = scriptpubkey; //hex
 		this.value = value;
@@ -785,7 +786,8 @@ class UTXO {
 
 		this.spendertx = spendertx;
 		this.loadablespender = loadablespender;
-		this.loadablecreator = loadablecreator;
+		
+		this.iscoinbase = iscoinbase;
 
 	}
 
@@ -852,6 +854,7 @@ class UTXO {
 	async getTransaction() {
 
 		if (this.tx) return this.tx;
+		if (this.iscoinbase) throw new Error("Attempting to load creator of coinbase utxo!");
 		this.tx = await getTransactionFull(this.txid);
 		return this.tx;
 
@@ -971,17 +974,39 @@ async function getTransactionFull(txid) {
 
 		let utxfd = new UTXOFullData(tx.vin[i].scriptsig, tx.vin[i].sequence, tx.vin[i].witness != undefined ? tx.vin[i].witness : []);
 
-		ins.push(
-			new UTXO(
-				tx.vin[i].prevout.scriptpubkey,
-				tx.vin[i].prevout.value,
-				tx.status.confirmed ? tx.status.block_height : 0,
-				tx.vin[i].txid,
-				tx.vin[i].vout,
-				txid,
-				utxfd
-			)
-		);
+		if (tx.vin[i].is_coinbase) {
+			let valsum = 0;
+			for (let i = 0; i < tx.vout.length; i++) valsum += tx.vout[i].value;
+			ins.push(
+				new UTXO(
+					"",
+					valsum,
+					tx.status.confirmed ? tx.status.block_height : 0,
+					tx.vin[i].txid,
+					tx.vin[i].vout,
+					txid,
+					utxfd,
+					null,
+					null,
+					false,
+					true
+				)
+			);
+		} else {
+			ins.push(
+				new UTXO(
+					tx.vin[i].prevout.scriptpubkey,
+					tx.vin[i].prevout.value,
+					tx.status.confirmed ? tx.status.block_height : 0,
+					tx.vin[i].txid,
+					tx.vin[i].vout,
+					txid,
+					utxfd
+				)
+			);
+		}
+		
+
 
 	}
 
@@ -1903,7 +1928,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 		);
 		this.utxo = utxo;
 
-		this.trySetState(ButtonSide.LEFT, PlugStackState.MISSING);
+		this.trySetState(ButtonSide.LEFT, utxo.iscoinbase ? PlugStackState.ALLDISPLAYED : PlugStackState.MISSING);
 		this.trySetState(ButtonSide.RIGHT, PlugStackState.MISSING);
 
 	}
@@ -1936,7 +1961,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 		if (this.utxo.status > 0) {
 
-			text("SPENT #" + this.utxo.status, centerX, pos.y + (50 / canvasStepRatioY()));
+			text((this.utxo.iscoinbase ? "COINBASE" : "SPENT") + " #" + this.utxo.status, centerX, pos.y + (50 / canvasStepRatioY()));
 
 		} else if (this.utxo.status == 0) {
 
@@ -2817,8 +2842,10 @@ class TransactionDisplay extends InputOutputDisplayElement {
 		textSize(20 / canvasStepRatioY());
 
 		if (this.transaction.status > 0) {
-
-			text("CONFIRMED #" + this.transaction.status, centerX, pos.y + (70 / canvasStepRatioY()));
+			
+			let t = "CONFIRMED";
+			if (this.transaction.inputs.length == 1 && this.transaction.inputs[0].iscoinbase) t = "COINBASE";
+			text(t + " #" + this.transaction.status, centerX, pos.y + (70 / canvasStepRatioY()));
 
 		} else if (this.transaction.status == 0) {
 
@@ -2984,7 +3011,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 				textAsElement("PSBT: "),
 				document.createElement("br"),
 				document.createElement("br"),
-				HTMLInput("", pbt.toBase64(), false, null, "textarea"),
+				HTMLInput("", pbt, false, null, "textarea"),
 				document.createElement("br"),
 				document.createElement("br"),
 				textAsElement("Raw: "),
