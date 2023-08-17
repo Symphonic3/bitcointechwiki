@@ -2496,6 +2496,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 					}
 
 					let ini = utx.fullData.witness;
+					if (ini == null) ini = [];
 					let oini = ini.slice(0, -1);
 					let witin = HTMLInput("Witness (Seperate with empty lines)", oini.map(x => x.length == 0 ? EMPTY_WITNESS_ITEM : x).join("\n\n"), !disSig, function(e) {
 						doUpdating(witin, function() {
