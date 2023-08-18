@@ -122,6 +122,7 @@ const EMPTY_WITNESS_ITEM = "[EMPTY ITEM]";
 let canvasOrigin;
 let spawns = 0;
 let canvasSize;
+let canvasBounds;
 
 let showfps = false;
 function keyPressed() { if (keyCode == 70) { showfps = !showfps; } } //F key
@@ -136,9 +137,8 @@ function canvasStepRatioY() {
 
 let canvas;
 
-function resetCanvasSize() {
-	canvasSize = new Point(min(window.innerWidth * 0.95, 1300), window.innerHeight * 4 / 5);
-	
+function resetCanvasBounds() {
+	canvasBounds = new Point(min(window.innerWidth * 0.95, 1300), window.innerHeight * 4 / 5);
 }
 
 function windowResized() {
@@ -148,17 +148,23 @@ function windowResized() {
 	oldCenOrigin.x += canvasSize.x/2;
 	oldCenOrigin.y += canvasSize.y/2;
 	
-	resetCanvasSize();
+	let oldCanvasBounds = canvasBounds;
+	resetCanvasBounds();
+	
+	canvasSize.x *= canvasBounds.x/oldCanvasBounds.x;
+	canvasSize.y *= canvasBounds.y/oldCanvasBounds.y;
+
 	canvasOrigin.x = oldCenOrigin.x - canvasSize.x/2; //TL
 	canvasOrigin.y = oldCenOrigin.y - canvasSize.y/2;
-	resizeCanvas(canvasSize.x, canvasSize.y);
+	resizeCanvas(canvasBounds.x, canvasBounds.y);
 }
 
 function setup() {
 	bitcoin.initEccLib(secp256k1);
-	resetCanvasSize();
+	resetCanvasBounds();
+	canvasSize = new Point(1200, 1200*canvasBounds.y/canvasBounds.x)
 	canvasOrigin = new Point(-canvasSize.x / 2, -canvasSize.y / 2);
-	canvas = createCanvas(canvasSize.x, canvasSize.y);
+	canvas = createCanvas(canvasBounds.x, canvasBounds.y);
 	/*uielements.push(
 	  new InputOutputDisplayElement(new BoundingBox(new Point(-25, -270), 50, 50))
 	); //TEST*/
@@ -444,7 +450,7 @@ function draw() {
 		let deltaX = isPinching ? pinchCenX - prevPinchCenX : mouseX - pmouseX;
 		let deltaY = isPinching ? pinchCenY - prevPinchCenY : mouseY - pmouseY;
 		
-		if (hoverElement == null && (!isPinching || (prevPinchCenX != Infinity && prevPinchCenY != Infinity))) {
+		if ((hoverElement == null || isPinching) && (!isPinching || (prevPinchCenX != Infinity && prevPinchCenY != Infinity))) {
 			canvasOrigin.x -= deltaX * canvasStepRatioX();
 			canvasOrigin.y -= deltaY * canvasStepRatioY();
 			spawns = 0;
@@ -580,7 +586,7 @@ function draw() {
 		celement.render();
 	}
 
-	if (drag != null) {
+	if (drag != null && !isPinching) {
 
 		setCursor("grabbing");
 		drag.drag();
@@ -1296,7 +1302,7 @@ document.addEventListener('touchmove', function (e) {
 		prevPinchCenY = pinchCenY;
 		pinchCenX = mouseX + ((e.touches[1].clientX - e.touches[0].clientX)/2);
 		pinchCenY = mouseY + ((e.touches[1].clientY - e.touches[0].clientY)/2);
-		wheelDelta += (abs(fingerDist / newFingDist) - 1)*25*10;
+		wheelDelta += (abs(fingerDist / newFingDist) - 1)*25*15;
 		fingerDist = newFingDist;
 	}
 }, false);
@@ -1687,7 +1693,7 @@ class InputOutputDisplayElement {
 			line(l1.x, l1.y, l2.x, l2.y);
 			line(l3.x, l3.y, l4.x, l4.y);
 
-			if (!buttoning && !drag && mouseIsPressed) {
+			if (!buttoning && !drag && mouseIsPressed && !isPinching) {
 
 				decisionpointer = "grabbing";
 				let deltaX = mouseX - pmouseX;
