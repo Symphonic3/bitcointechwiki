@@ -3189,7 +3189,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 		}
 
 		function getLocktimeDesc() {
-			return " (Not mineable until after " + (tx.locktime < 500000000 ? "block " + tx.locktime : "BIP113 11-block MTP " + tx.locktime) + ")" + (nLd ? " (DISABLED)" : "");
+			return " (Not mineable until after " + (tx.locktime < 500000000 ? "block " + tx.locktime : "BIP113 11-block MTP " + tx.locktime) + ")" + (nLd ? " (DISABLED BY INPUT SEQUENCES)" : "");
 		}
 
 		function getFeerateDesc() {
