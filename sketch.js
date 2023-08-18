@@ -3103,7 +3103,27 @@ class TransactionDisplay extends InputOutputDisplayElement {
 		async function getExport() {
 
 			let pbt = await tx.getPsbt();
+			
+			let rawd = HTMLInput("", tx.getBitcoin().toHex(), false, null, "textarea");
+			
+			let linkout = document.createElement("a");
+			linkout.innerHTML = "Copy raw and go to broadcast page";
+			linkout.href = "";
+			linkout.target = "_blank";
+			linkout.onclick = async (event) => {  
+				
+				event.preventDefault();
+				
+				//select the text field (mainly for mobile)
+				rawd.select();
+				rawd.setSelectionRange(0, 99999); // 
 
+				await navigator.clipboard.writeText(rawd.value); 
+				
+				window.open("https://" + selchain.endpoint + "/tx/push", "_blank");
+				
+			};
+			
 			return joinElements([
 				textAsElement("PSBT: "),
 				document.createElement("br"),
@@ -3114,7 +3134,9 @@ class TransactionDisplay extends InputOutputDisplayElement {
 				textAsElement("Raw: "),
 				document.createElement("br"),
 				document.createElement("br"),
-				HTMLInput("", tx.getBitcoin().toHex(), false, null, "textarea")
+				rawd,
+				document.createElement("br"),
+				linkout
 			]);
 		}
 
