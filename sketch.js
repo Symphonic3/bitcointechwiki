@@ -2138,6 +2138,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 						ls.innerHTML = "";
 						ls.appendChild(getLS());
 					}
+					resetRS();
 				} catch (ex) {
 					addI.classList.add("error");
 					print(ex);
