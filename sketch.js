@@ -224,6 +224,22 @@ function setup() {
 	addbutton.mouseClicked(function() {
 		doInput();
 	});
+	
+	let importtxbutton = new p5.Element(document.getElementById("addimporttx"));
+	importtxbutton.mouseClicked(function() {
+		let p = prompt("Enter Base64 PSBT");
+		if (!p.startsWith("cHNid")) throw new Error("Obviously not PSBT"); //sanity check
+		let tx = loadTXPSBT(p);
+		let txd = new TransactionDisplay(
+			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
+			tx,
+			MutabilityType.ALL
+		);
+		txd.addButtonPushed(ButtonSide.LEFT, true);
+		txd.addButtonPushed(ButtonSide.RIGHT, true);
+		uielements.push(txd);
+	});
+	
 	let emptytxbutton = new p5.Element(document.getElementById("addemptytx"));
 	emptytxbutton.mouseClicked(function() {
 		let tx = new Transaction([], [], 2, 0, -1);
@@ -781,8 +797,7 @@ class UTXO {
 
 		this.fullData = fullData;
 
-		this.tx = null;
-		this.spendertx = null;
+		this.tx = tx;
 
 		this.spendertx = spendertx;
 		this.loadablespender = loadablespender;
@@ -905,6 +920,81 @@ class UTXO {
 		}
 
 	}
+
+}
+
+//
+// BitcoinJS tx loading
+//
+
+function loadTXPSBT(rawpsbt) {
+	
+	let psbt = bitcoin.Psbt.fromBase64(rawpsbt);
+	let btx = psbt.extractTransaction();
+	
+	let tx = new Transaction([], [], btx.version, btx.locktime, -1);
+
+	for (let i = 0; i < btx.ins.length; i++) {
+
+		let utxfd = new UTXOFullData(btx.ins[i].script, btx.ins[i].sequence, btx.ins[i].witness.map(x => x.toString("hex")) );
+
+		if (btx.isCoinbase()) {
+			let valsum = 0;
+			for (let i = 0; i < btx.outs.length; i++) valsum += btx.outs[i].value;
+			tx.inputs.push(
+				new UTXO(
+					"",
+					valsum,
+					-2,
+					Buffer.from(btx.ins[i].hash.toString("hex"), "hex").reverse().toString("hex"),
+					btx.ins[i].index,
+					null,
+					utxfd,
+					null,
+					tx,
+					false,
+					true
+				)
+			);
+		} else {
+			let inScriptPubkey;
+			let inValue;
+			if (psbt.data.inputs[i].nonWitnessUtxo && psbt.data.inputs[i].nonWitnessUtxo.length > 0) {
+				let previn = bitcoin.Transaction.fromBuffer(psbt.data.inputs[i].nonWitnessUtxo);
+				inScriptPubkey = previn.outs[btx.ins[i].index].script.toString("hex");
+				inValue = previn.outs[btx.ins[i].index].value;
+			} else {
+				inScriptPubkey = "";
+				inValue = 0;
+			}
+			tx.inputs.push(
+				new UTXO(
+					inScriptPubkey,
+					inValue,
+					-2,
+					Buffer.from(btx.ins[i].hash.toString("hex"), "hex").reverse().toString("hex"),
+					btx.ins[i].index,
+					null,
+					utxfd,
+					null,
+					tx,
+					false,
+					false
+				)
+			);
+		}
+		
+	}
+
+	for (let i = 0; i < btx.outs.length; i++) {
+
+		let utxfd = new UTXOFullData();
+
+		tx.outputs.push(new UTXO(btx.outs[i].script.toString("hex"), btx.outs[i].value, -2, null, null, null, utxfd, tx, null, false, false));
+
+	}
+	
+	return tx;
 
 }
 
@@ -2889,7 +2979,8 @@ class TransactionDisplay extends InputOutputDisplayElement {
 
 	}
 
-	addButtonPushed(side) { //loadmoreinputs (side)	
+	addButtonPushed(side, loading = false) { //loadmoreinputs (side)	
+	
 		let centerP = this.getBounds().pos.y + this.getBounds().height / 2;
 
 		if (side == ButtonSide.LEFT) {
@@ -2909,11 +3000,13 @@ class TransactionDisplay extends InputOutputDisplayElement {
 							(centerP - (this.transaction.inputs.length / 2) * 150) + (i * 150) + 30
 						),
 						curi,
-						MutabilityType.NONE
+						loading ? MutabilityType.OUTPUTSONLY : MutabilityType.NONE
 					);
 					c.attach(ButtonSide.LEFT, utxd);
 					utxd.trySetState(ButtonSide.RIGHT, PlugStackState.ALLDISPLAYED);
-
+					
+					c.editable = loading;
+					
 					uielements.push(utxd);
 
 				}
@@ -2949,11 +3042,13 @@ class TransactionDisplay extends InputOutputDisplayElement {
 							(centerP - (this.transaction.outputs.length / 2) * 150) + (i * 150) + 30
 						),
 						curi,
-						this.transaction.outputs[i].status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY
+						loading ? MutabilityType.ALL : (this.transaction.outputs[i].status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY)
 					);
 					c.attach(ButtonSide.RIGHT, utxd);
 					utxd.trySetState(ButtonSide.LEFT, PlugStackState.ALLDISPLAYED);
-
+					
+					c.editable = loading;
+					
 					uielements.push(utxd);
 
 				}
