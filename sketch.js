@@ -133,9 +133,27 @@ function canvasStepRatioY() {
 
 let canvas;
 
+function resetCanvasSize() {
+	canvasSize = new Point(min(window.innerWidth * 0.95, 1300), window.innerHeight * 4 / 5);
+	
+}
+
+function windowResized() {
+	spawns = 0;
+	
+	let oldCenOrigin = canvasOrigin;
+	oldCenOrigin.x += canvasSize.x/2;
+	oldCenOrigin.y += canvasSize.y/2;
+	
+	resetCanvasSize();
+	canvasOrigin.x = oldCenOrigin.x - canvasSize.x/2; //TL
+	canvasOrigin.y = oldCenOrigin.y - canvasSize.y/2;
+	resizeCanvas(canvasSize.x, canvasSize.y);
+}
+
 function setup() {
 	bitcoin.initEccLib(secp256k1);
-	canvasSize = new Point(min(window.innerWidth * 0.95, 1300), window.innerHeight * 4 / 5);
+	resetCanvasSize();
 	canvasOrigin = new Point(-canvasSize.x / 2, -canvasSize.y / 2);
 	canvas = createCanvas(canvasSize.x, canvasSize.y);
 	/*uielements.push(
