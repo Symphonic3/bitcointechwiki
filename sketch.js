@@ -2343,7 +2343,43 @@ class UTXODisplay extends InputOutputDisplayElement {
 				ld.innerHTML = getSequenceDesc();
 				updateStatic();
 			});
-			let vr2 = insertTableRowEV("nSequence", joinElements([hi2, ld]));
+			function upSeq(n){
+				utx.fullData.sequence = n;
+				hi2.getElementsByTagName("input")[0].value = n;
+				ld.innerHTML = getSequenceDesc();
+				updateStatic();
+			}
+			let lbtntime = HTMLButton("Set relative MTP", function() {
+				
+				let ninputtime = parseInt(prompt("Enter amount of minutes:"));
+				if (isNaN(ninputtime)) return;
+				let ndatetimestamp = (ninputtime*60) / 512;
+				upSeq(ndatetimestamp | ((1 << 22) >>> 0));
+
+			});
+			let lbtnblock = HTMLButton("Set block amount", function() {
+				let blkn = prompt("Enter relative amount of blocks:");
+				let nblocks = parseInt(blkn);
+				if (isNaN(nblocks)) return;
+				if (nblocks < 65535) upSeq(nblocks);
+			});
+			let lbtndisRelLt = HTMLButton("No lock + RBF", function() {
+				upSeq(4294967293);
+			});
+			let lbtndisRBF = HTMLButton("No lock", function() {
+				upSeq(4294967294);
+			});
+			let lbtnflagDisLt = HTMLButton("No lock + No locktime", function() {
+				upSeq(4294967295);
+			});
+			let vr2 = insertTableRowEV("nSequence", joinElements([
+				lbtntime, textAsElement(" "),
+				lbtnblock, textAsElement(" "),
+				lbtndisRelLt, textAsElement(" "),
+				lbtndisRBF, textAsElement(" "),
+				lbtnflagDisLt, textAsElement(" "),
+				hi2, ld
+			]));
 
 		}
 
