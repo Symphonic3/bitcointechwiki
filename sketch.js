@@ -2345,6 +2345,8 @@ class UTXODisplay extends InputOutputDisplayElement {
 			});
 			function upSeq(n){
 				utx.fullData.sequence = n;
+				hi2.getElementsByTagName("select")[0].selectedIndex = 0;
+				hi2.getElementsByTagName("select")[0].dispatchEvent(new Event('change'));
 				hi2.getElementsByTagName("input")[0].value = n;
 				ld.innerHTML = getSequenceDesc();
 				updateStatic();
@@ -3268,26 +3270,28 @@ class TransactionDisplay extends InputOutputDisplayElement {
 				ld.innerHTML = getLocktimeDesc();
 				updateStatic();
 			});
+			function upLt(n){
+				tx.locktime = n;
+				hi2.getElementsByTagName("select")[0].selectedIndex = 0;
+				hi2.getElementsByTagName("select")[0].dispatchEvent(new Event('change'));
+				hi2.getElementsByTagName("input")[0].value = n;
+				ld.innerHTML = getLocktimeDesc();
+				updateStatic();
+			}
 			let lbtntime = HTMLButton("Set MTP", function() { });
 			let flatconfig = {enableTime: true};
 			if (tx.locktime >= 500000000) flatconfig.defaultDate = new Date(tx.locktime*1000);
 			flatpickr(lbtntime, flatconfig).config.onChange.push(function(selectedDates, dateStr, instance) { 
 			
 				let ndatetimestamp = selectedDates[0].getTime() / 1000;
-				tx.locktime = ndatetimestamp;
-				hi2.getElementsByTagName("input")[0].value = ndatetimestamp;
-				ld.innerHTML = getLocktimeDesc();
-				updateStatic();
+				upLt(ndatetimestamp);
 			
 			});
 			let lbtnblock = HTMLButton("Set block height", function() {
 				let blkheight = prompt("Enter absolute locktime block height:");
 				let nblocks = parseInt(blkheight);
 				if (isNaN(nblocks)) return;
-				if (nblocks < 500000000) tx.locktime = nblocks;
-				hi2.getElementsByTagName("input")[0].value = nblocks;
-				ld.innerHTML = getLocktimeDesc();
-				updateStatic();
+				if (nblocks < 500000000) upLt(nblocks);
 			});
 			let vr2 = insertTableRowEV("nLocktime", joinElements([lbtntime, textAsElement(" "), lbtnblock, textAsElement(" "), hi2, ld]));
 
