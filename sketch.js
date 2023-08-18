@@ -3232,7 +3232,18 @@ class TransactionDisplay extends InputOutputDisplayElement {
 				ld.innerHTML = getLocktimeDesc();
 				updateStatic();
 			});
-			let vr2 = insertTableRowEV("nLocktime", joinElements([hi2, ld]));
+			let lbtntime = HTMLButton("Set MTP", function() {
+				//TODO date picker
+			});
+			let lbtnblock = HTMLButton("Set block height", function() {
+				let blkheight = prompt("Enter absolute locktime block height:");
+				let nblocks = parseInt(blkheight);
+				if (nblocks < 500000000) tx.locktime = nblocks;
+				hi2.getElementsByTagName("input")[0].value = nblocks;
+				ld.innerHTML = getLocktimeDesc();
+				updateStatic();
+			});
+			let vr2 = insertTableRowEV("nLocktime", joinElements([lbtntime, textAsElement(" "), lbtnblock, textAsElement(" "), hi2, ld]));
 
 			//Create array of options to be added
 			let drpOptions = ["Remainder (Default)", "Rate", "Value"];
