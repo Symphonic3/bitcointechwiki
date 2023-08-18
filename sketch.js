@@ -3247,6 +3247,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 			let lbtnblock = HTMLButton("Set block height", function() {
 				let blkheight = prompt("Enter absolute locktime block height:");
 				let nblocks = parseInt(blkheight);
+				if (isNaN(nblocks)) return;
 				if (nblocks < 500000000) tx.locktime = nblocks;
 				hi2.getElementsByTagName("input")[0].value = nblocks;
 				ld.innerHTML = getLocktimeDesc();
