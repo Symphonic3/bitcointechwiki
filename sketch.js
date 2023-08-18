@@ -410,7 +410,7 @@ function draw() {
 	let nr = n * 1.3;
 	let pi = new Point(width - n, height - n);
 
-	if (!mouseIsPressed || mouseClickedThisFrame) {
+	if ((!mouseIsPressed || mouseClickedThisFrame) && !isPinching) {
 
 		/*//determine plus button
 		if ( ( ((mouseX-pi.x)**2) + ((mouseY-pi.y)**2) ) < (nr/2)**2) {
@@ -441,10 +441,10 @@ function draw() {
 	}
 
 	if (mouseInBounds && mouseIsPressed && !btnHover && !drag) {
-		let deltaX = mouseX - pmouseX;
-		let deltaY = mouseY - pmouseY;
-
-		if (hoverElement == null) {
+		let deltaX = isPinching ? pinchCenX - prevPinchCenX : mouseX - pmouseX;
+		let deltaY = isPinching ? pinchCenY - prevPinchCenY : mouseY - pmouseY;
+		
+		if (hoverElement == null && (!isPinching || (prevPinchCenX != Infinity && prevPinchCenY != Infinity))) {
 			canvasOrigin.x -= deltaX * canvasStepRatioX();
 			canvasOrigin.y -= deltaY * canvasStepRatioY();
 			spawns = 0;
@@ -456,13 +456,17 @@ function draw() {
 		wheelDelta != 0 &&
 		!(canvasSize.x + wheelDelta <= 0 || canvasSize.y + wheelDelta <= 0)
 	) {
+		
+		let useMX = isPinching ? pinchCenX : mouseX;
+		let useMY = isPinching ? pinchCenY : mouseY;
+		
 		//account for aspect ratio of canvas
 		let aspect = canvasSize.y / canvasSize.x;
-		let nCenter = realToCart(new Point(mouseX, mouseY));
+		let nCenter = realToCart(new Point(useMX, useMY));
 		let deltaA = ((sqrt((canvasSize.x + canvasSize.y) / 2) + wheelDelta / 25) ** 2 - (canvasSize.x + canvasSize.y) / 2);
 		canvasSize.x += deltaA;
 		canvasSize.y += deltaA * aspect;
-		let newM = realToCart(new Point(mouseX, mouseY));
+		let newM = realToCart(new Point(useMX, useMY));
 		canvasOrigin.x += nCenter.x - newM.x;
 		canvasOrigin.y += nCenter.y - newM.y;
 		spawns = 0;
@@ -1250,15 +1254,61 @@ function getAddressType(address) {
 //
 
 let wheelDelta = 0;
+let fingerDist = 0;
+
+let isPinching = false; //used to suppress motion and create custom offset
+
+let pinchCenX = Infinity;
+let pinchCenY = Infinity;
+
+let prevPinchCenX = Infinity;
+let prevPinchCenY = Infinity;
 
 function mouseWheel(event) {
 	if (mouseInBounds && keyIsDown(SHIFT)) {
-		wheelDelta = event.delta;
+		wheelDelta += event.delta;
 		return false;
 	} else {
 		return true;
 	}
 }
+
+function getPinchDistance(e) {
+	let delX = e.touches[0].clientX - e.touches[1].clientX;
+	let delY = e.touches[0].clientY - e.touches[1].clientY;
+	return Math.sqrt(delX**2 + delY**2);
+}
+
+document.addEventListener('touchstart', function (e) {
+	if (e.touches.length == 2) { //2 touches = pinch zoom
+		e.preventDefault();
+		isPinching = true;
+		fingerDist = getPinchDistance(e);
+	}
+}, false);
+
+document.addEventListener('touchmove', function (e) {
+	if (e.touches.length == 2) { // If pinch-zooming
+		e.preventDefault();
+		isPinching = true;
+		let newFingDist = getPinchDistance(e);
+		prevPinchCenX = pinchCenX;
+		prevPinchCenY = pinchCenY;
+		pinchCenX = mouseX + ((e.touches[1].clientX - e.touches[0].clientX)/2);
+		pinchCenY = mouseY + ((e.touches[1].clientY - e.touches[0].clientY)/2);
+		wheelDelta += (abs(fingerDist / newFingDist) - 1)*25*10;
+		fingerDist = newFingDist;
+	}
+}, false);
+
+document.addEventListener('touchend', function (e) {
+	fingerDist = 0;
+	pinchCenX = Infinity;
+	pinchCenY = Infinity;
+	prevPinchCenX = Infinity;
+	prevPinchCenY = Infinity;
+    isPinching = false;
+}, false);
 
 //
 // UI CLASSES
