@@ -123,6 +123,9 @@ let canvasOrigin;
 let spawns = 0;
 let canvasSize;
 
+let showfps = false;
+function keyPressed() { if (keyCode == 70) { showfps = !showfps; } } //F key
+
 function canvasStepRatioX() {
 	return canvasSize.x / width;
 }
@@ -377,7 +380,9 @@ function insertTableRowEV(key, value) {
 
 let btnHover = false;
 
+let slowFrameRate = 0;
 function draw() {
+	if (frameCount % 10 == 0) slowFrameRate = frameRate();
 	mouseInBounds = (mouseX > 0 && mouseY > 0 && mouseX < width && mouseY < height);
 
 	if (mouseInBounds) {
@@ -576,6 +581,14 @@ function draw() {
 		setCursor("grabbing");
 		drag.drag();
 
+	}
+	
+	if (showfps) {
+		fill(0);
+		strokeWeight(0);
+		textSize(20);
+		textAlign(LEFT, TOP);
+		text("(F) to hide, fps: " + round(slowFrameRate), 0, 0);
 	}
 
 	//utility
