@@ -3232,8 +3232,17 @@ class TransactionDisplay extends InputOutputDisplayElement {
 				ld.innerHTML = getLocktimeDesc();
 				updateStatic();
 			});
-			let lbtntime = HTMLButton("Set MTP", function() {
-				//TODO date picker
+			let lbtntime = HTMLButton("Set MTP", function() { });
+			let flatconfig = {enableTime: true};
+			if (tx.locktime >= 500000000) flatconfig.defaultDate = new Date(tx.locktime*1000);
+			flatpickr(lbtntime, flatconfig).config.onChange.push(function(selectedDates, dateStr, instance) { 
+			
+				let ndatetimestamp = selectedDates[0].getTime() / 1000;
+				tx.locktime = ndatetimestamp;
+				hi2.getElementsByTagName("input")[0].value = ndatetimestamp;
+				ld.innerHTML = getLocktimeDesc();
+				updateStatic();
+			
 			});
 			let lbtnblock = HTMLButton("Set block height", function() {
 				let blkheight = prompt("Enter absolute locktime block height:");
