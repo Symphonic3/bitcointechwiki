@@ -102,17 +102,33 @@ class Colors {
 
 }
 
-let COLOR_PALETTE_GRAY;
-let COLOR_PALETTE_GREEN;
-let COLOR_PALETTE_GOLD;
-let COLOR_PALETTE_PURPLE;
+let COLOR_PALETTE_GRAY = {};
+let COLOR_PALETTE_GREEN = {};
+let COLOR_PALETTE_GOLD = {};
+let COLOR_PALETTE_PURPLE = {};
+let COLOR_PALETTE_RED = {};
 
 function preload() {
 
-	COLOR_PALETTE_GRAY = new Colors(color(235, 235, 235), color(250, 250, 250), color(200, 200, 200));
-	COLOR_PALETTE_GREEN = new Colors(color(164, 235, 181), color(179, 255, 195), color(125, 179, 137));
-	COLOR_PALETTE_GOLD = new Colors(color(235, 203, 164), color(255, 220, 179), color(179, 154, 125));
-	COLOR_PALETTE_PURPLE = new Colors(color(164, 192, 235), color(179, 209, 255), color(125, 146, 179));
+	COLOR_PALETTE_GRAY.normalcolor = color(235, 235, 235);
+	COLOR_PALETTE_GRAY.lightcolor = color(250, 250, 250);
+	COLOR_PALETTE_GRAY.darkcolor = color(200, 200, 200);
+	
+	COLOR_PALETTE_GREEN.normalcolor = color(164, 235, 181);
+	COLOR_PALETTE_GREEN.lightcolor = color(179, 255, 195);
+	COLOR_PALETTE_GREEN.darkcolor = color(125, 179, 137);
+	
+	COLOR_PALETTE_GOLD.normalcolor = color(235, 203, 164);
+	COLOR_PALETTE_GOLD.lightcolor = color(255, 220, 179);
+	COLOR_PALETTE_GOLD.darkcolor = color(179, 154, 125);
+	
+	COLOR_PALETTE_PURPLE.normalcolor = color(164, 192, 235);
+	COLOR_PALETTE_PURPLE.lightcolor = color(179, 209, 255);
+	COLOR_PALETTE_PURPLE.darkcolor = color(125, 146, 179);
+	
+	COLOR_PALETTE_RED.normalcolor = color(235, 171, 164);
+	COLOR_PALETTE_RED.lightcolor = color(255, 186, 179);
+	COLOR_PALETTE_RED.darkcolor = color(179, 130, 125);
 
 }
 
@@ -199,7 +215,7 @@ function setup() {
 							canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)
 						), 
 						utxo, 
-						utxo.status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY
+						utxo.status == Status.STATUS_UTXO_SPENDABLE ? MutabilityType.OUTPUTSONLY : MutabilityType.NONE
 					)
 				);
 				inp.elt.classList.remove("error");
@@ -228,7 +244,7 @@ function setup() {
 								(sy - (n / 2) * 150) + (i * 150) + 30 + (canvasSize.y / 30 * spawns)
 							),
 							utxo,
-							utxo.status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY
+							utxo.status == Status.STATUS_UTXO_SPENDABLE ? MutabilityType.OUTPUTSONLY : MutabilityType.NONE
 						)
 					);
 
@@ -269,7 +285,7 @@ function setup() {
 	
 	let emptytxbutton = new p5.Element(document.getElementById("addemptytx"));
 	emptytxbutton.mouseClicked(function() {
-		let tx = new Transaction([], [], 2, 0, -1);
+		let tx = new Transaction([], [], 2, 0, Status.STATUS_NEW, -1);
 		let txd = new TransactionDisplay(
 			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
 			tx,
@@ -280,7 +296,7 @@ function setup() {
 
 	let utxoaddressbutton = new p5.Element(document.getElementById("addutxoaddress"));
 	utxoaddressbutton.mouseClicked(function() {
-		let utx = new UTXO("", 0, -2, null, null, null, new UTXOFullData(), null, null, false, false);
+		let utx = new UTXO("", 0, Status.STATUS_NEW, -1, null, null, null, new UTXOFullData(), null, null, false, false);
 		utx.scriptpubkey = bitcoin.address.toOutputScript(prompt("Enter address:"), selchain.bnet).toString("hex");
 		let utxd = new UTXODisplay(
 			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
@@ -292,7 +308,7 @@ function setup() {
 
 	let emptyutxobutton = new p5.Element(document.getElementById("addemptyutxo"));
 	emptyutxobutton.mouseClicked(function() {
-		let utx = new UTXO("", 0, -2, null, null, null, new UTXOFullData(), null, null, false, false);
+		let utx = new UTXO("", 0, Status.STATUS_NEW, -1, null, null, null, new UTXOFullData(), null, null, false, false);
 		let utxd = new UTXODisplay(
 			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
 			utx,
@@ -674,16 +690,27 @@ function drawBezier(thisCenX, thisCenY, thatCenX, thatCenY, opacity = 255) {
 // BITCOIN DATA STRUCTURES
 //
 
+const Status = {
+
+	STATUS_CONFIRMED: { colors: COLOR_PALETTE_GREEN, desc: "SPENT", desctx: "CONFIRMED" },
+	STATUS_MEMPOOL_UNCONFIRMED: { colors: COLOR_PALETTE_PURPLE, desc: "SPENT (MEMPOOL)", desctx: "MEMPOOL" },
+	STATUS_NEW: { colors: COLOR_PALETTE_GRAY, desc: "NEW", desctx: "NEW" },
+	STATUS_COIN_SPENDABLE: { colors: COLOR_PALETTE_GOLD, desc: "AVAILABLE" },
+	STATUS_COIN_DETACHED: { colors: COLOR_PALETTE_RED, desc: "DETACHED" },
+
+}
+
 class Transaction {
 
-	constructor(vin, vout, version, locktime, status) {
+	constructor(vin, vout, version, locktime, status, confblock = -1) {
 
 		this.inputs = vin; //UTXO []
 		this.outputs = vout; //UTXO []
 		this.version = version;
 		this.locktime = locktime;
 
-		this.status = status; //-1 for new, 0 for mempool unconfirmed, block height for in block
+		this.status = status;
+		this.confblock = confblock;
 
 	}
 
@@ -825,12 +852,13 @@ class UTXOFullData {
 
 class UTXO {
 
-	constructor(scriptpubkey, value, status, txid = null, outpoint = null, spendertxid = null, fullData = null, tx = null, spendertx = null, loadablespender = true, iscoinbase = false) {
+	constructor(scriptpubkey, value, status, confblock = -1, txid = null, outpoint = null, spendertxid = null, fullData = null, tx = null, spendertx = null, loadablespender = true, iscoinbase = false) {
 
 		this.scriptpubkey = scriptpubkey; //hex
 		this.value = value;
 
-		this.status = status; //-2 for new, -1 for spendable, 0 for mempool spent, block height for spent in block
+		this.status = status;
+		this.confblock = confblock;
 
 		this.txid = txid;
 		this.outpoint = outpoint;
@@ -973,7 +1001,7 @@ function loadTXPSBT(rawpsbt) {
 	let psbt = bitcoin.Psbt.fromBase64(rawpsbt);
 	let btx = psbt.extractTransaction();
 	
-	let tx = new Transaction([], [], btx.version, btx.locktime, -1);
+	let tx = new Transaction([], [], btx.version, btx.locktime, Status.STATUS_NEW, -1);
 
 	for (let i = 0; i < btx.ins.length; i++) {
 
@@ -986,7 +1014,8 @@ function loadTXPSBT(rawpsbt) {
 				new UTXO(
 					"",
 					valsum,
-					-2,
+					Status.STATUS_COIN_DETACHED,
+					-1,
 					Buffer.from(btx.ins[i].hash.toString("hex"), "hex").reverse().toString("hex"),
 					btx.ins[i].index,
 					null,
@@ -1012,7 +1041,8 @@ function loadTXPSBT(rawpsbt) {
 				new UTXO(
 					inScriptPubkey,
 					inValue,
-					-2,
+					Status.STATUS_COIN_DETACHED,
+					-1,
 					Buffer.from(btx.ins[i].hash.toString("hex"), "hex").reverse().toString("hex"),
 					btx.ins[i].index,
 					null,
@@ -1031,7 +1061,7 @@ function loadTXPSBT(rawpsbt) {
 
 		let utxfd = new UTXOFullData();
 
-		tx.outputs.push(new UTXO(btx.outs[i].script.toString("hex"), btx.outs[i].value, -2, null, null, null, utxfd, tx, null, false, false));
+		tx.outputs.push(new UTXO(btx.outs[i].script.toString("hex"), btx.outs[i].value, Status.STATUS_NEW, -1, null, null, null, utxfd, tx, null, false, false));
 
 	}
 	
@@ -1112,7 +1142,8 @@ async function getTransactionFull(txid) {
 				new UTXO(
 					"",
 					valsum,
-					tx.status.confirmed ? tx.status.block_height : 0,
+					tx.status.confirmed ? Status.STATUS_CONFIRMED : Status.STATUS_MEMPOOL_UNCONFIRMED,
+					tx.status.confirmed ? tx.status.block_height : -1,
 					tx.vin[i].txid,
 					tx.vin[i].vout,
 					txid,
@@ -1128,7 +1159,8 @@ async function getTransactionFull(txid) {
 				new UTXO(
 					tx.vin[i].prevout.scriptpubkey,
 					tx.vin[i].prevout.value,
-					tx.status.confirmed ? tx.status.block_height : 0,
+					tx.status.confirmed ? Status.STATUS_CONFIRMED : Status.STATUS_MEMPOOL_UNCONFIRMED,
+					tx.status.confirmed ? tx.status.block_height : -1,
 					tx.vin[i].txid,
 					tx.vin[i].vout,
 					txid,
@@ -1146,11 +1178,20 @@ async function getTransactionFull(txid) {
 
 		let utxfd = outsp[i].spent ? undefined : new UTXOFullData();
 
-		outs.push(new UTXO(tx.vout[i].scriptpubkey, tx.vout[i].value, outsp[i].spent ? (outsp[i].status.confirmed ? outsp[i].status.block_height : 0) : -1, txid, i, outsp[i].txid, utxfd));
+		outs.push(new UTXO(
+			tx.vout[i].scriptpubkey,
+			tx.vout[i].value,
+			outsp[i].spent ? (outsp[i].status.confirmed ? Status.STATUS_CONFIRMED : Status.STATUS_MEMPOOL_UNCONFIRMED) : Status.STATUS_COIN_SPENDABLE,
+			(outsp[i].spent && outsp[i].status.confirmed) ? outsp[i].status.block_height : -1,
+			txid,
+			i,
+			outsp[i].txid,
+			utxfd
+		));
 
 	}
 
-	return new Transaction(ins, outs, tx.version, tx.locktime, tx.status.confirmed ? tx.status.block_height : 0);
+	return new Transaction(ins, outs, tx.version, tx.locktime, tx.status.confirmed ? Status.STATUS_CONFIRMED : Status.STATUS_MEMPOOL_UNCONFIRMED, tx.status.confirmed ? tx.status.block_height : -1);
 
 }
 
@@ -2093,16 +2134,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 	rowWidth = UTXODisplay.rowWidth;
 
 	constructor(centerPos, utxo, mutable) {
-		super(new BoundingBox(new Point(centerPos.x - 100, centerPos.y - 50), 200, 100), mutable, 65,
-			utxo.status > 0 ? COLOR_PALETTE_GREEN :
-			(
-				utxo.status == 0 ? COLOR_PALETTE_PURPLE :
-				(
-					utxo.status == -1 ? COLOR_PALETTE_GOLD :
-					COLOR_PALETTE_GRAY
-				)
-			), 1
-		);
+		super(new BoundingBox(new Point(centerPos.x - 100, centerPos.y - 50), 200, 100), mutable, 65, utxo.status.colors, 1);
 		this.utxo = utxo;
 
 		this.trySetState(ButtonSide.LEFT, utxo.iscoinbase ? PlugStackState.ALLDISPLAYED : PlugStackState.MISSING);
@@ -2136,21 +2168,13 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 		textSize(13 / canvasStepRatioY());
 
-		if (this.utxo.status > 0) {
+		if (this.utxo.status == Status.STATUS_CONFIRMED) {
 
-			text((this.utxo.iscoinbase ? "COINBASE" : "SPENT") + " #" + this.utxo.status, centerX, pos.y + (50 / canvasStepRatioY()));
-
-		} else if (this.utxo.status == 0) {
-
-			text("SPENT (MEMPOOL)", centerX, pos.y + (50 / canvasStepRatioY()));
-
-		} else if (this.utxo.status == -1) {
-
-			text("AVAILABLE", centerX, pos.y + (50 / canvasStepRatioY()));
+			text((this.utxo.iscoinbase ? "COINBASE" : "SPENT") + " #" + this.utxo.confblock, centerX, pos.y + (50 / canvasStepRatioY()));
 
 		} else {
-
-			text("NEW", centerX, pos.y + (50 / canvasStepRatioY()));
+			
+			text(this.utxo.status.desc, centerX, pos.y + (50 / canvasStepRatioY()));
 
 		}
 
@@ -2233,7 +2257,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 			return utx.getTXID() + ":" + utx.getOutpoint();
 		}
 		let idr = insertTableRow("ID", getID()); //TODO show some other id here when we have no parent
-		insertTableRow("Status", utx.status >= 0 ? "SPENT " + (utx.status == 0 ? "(MEMPOOL)" : "#" + utx.status) : (utx.status == -1 ? "AVAILABLE" : "NEW"));
+		insertTableRow("Status", utx.status == Status.STATUS_CONFIRMED ? "SPENT #" + utx.confblock : utx.status.desc);
 
 		function getValue() {
 			return satsAsBitcoin(utx.getValue());
@@ -3021,13 +3045,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 	rowWidth = TransactionDisplay.rowWidth;
 
 	constructor(centerPos, transaction, mutable) {
-		super(new BoundingBox(new Point(centerPos.x - 200, centerPos.y - 65), 400, 160), mutable, 80,
-			transaction.status > 0 ? COLOR_PALETTE_GREEN :
-			(
-				transaction.status == 0 ? COLOR_PALETTE_PURPLE :
-				COLOR_PALETTE_GRAY
-			)
-		);
+		super(new BoundingBox(new Point(centerPos.x - 200, centerPos.y - 65), 400, 160), mutable, 80, transaction.status.colors);
 		this.transaction = transaction;
 
 		this.trySetState(ButtonSide.LEFT, PlugStackState.MISSING);
@@ -3058,22 +3076,18 @@ class TransactionDisplay extends InputOutputDisplayElement {
 
 		textSize(20 / canvasStepRatioY());
 
-		if (this.transaction.status > 0) {
+		if (this.transaction.status == Status.STATUS_CONFIRMED) {
 			
 			let t = "CONFIRMED";
 			if (this.transaction.inputs.length == 1 && this.transaction.inputs[0].iscoinbase) t = "COINBASE";
-			text(t + " #" + this.transaction.status, centerX, pos.y + (70 / canvasStepRatioY()));
-
-		} else if (this.transaction.status == 0) {
-
-			text("MEMPOOL", centerX, pos.y + (70 / canvasStepRatioY()));
+			text(t + " #" + this.transaction.confblock, centerX, pos.y + (70 / canvasStepRatioY()));
 
 		} else {
 
-			text("NEW", centerX, pos.y + (70 / canvasStepRatioY()));
+			text(this.transaction.status.desctx, centerX, pos.y + (70 / canvasStepRatioY()));
 
 		}
-
+		
 		textSize(30 / canvasStepRatioY());
 
 		text(satsAsBitcoin(this.transaction.getInAmt()) + " in", centerX, pos.y + yFractional - (60 / canvasStepRatioY()));
@@ -3129,6 +3143,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 					);
 					c.attach(ButtonSide.LEFT, utxd);
 					utxd.trySetState(ButtonSide.RIGHT, PlugStackState.ALLDISPLAYED);
+					if (loading) utxd.trySetState(ButtonSide.LEFT, PlugStackState.ALLDISPLAYED);
 					
 					c.editable = loading;
 					
@@ -3167,7 +3182,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 							(centerP - (this.transaction.outputs.length / 2) * 150) + (i * 150) + 30
 						),
 						curi,
-						loading ? MutabilityType.ALL : (this.transaction.outputs[i].status >= 0 ? MutabilityType.NONE : MutabilityType.OUTPUTSONLY)
+						loading ? MutabilityType.ALL : (this.transaction.outputs[i].status == Status.STATUS_COIN_SPENDABLE ? MutabilityType.OUTPUTSONLY : MutabilityType.NONE)
 					);
 					c.attach(ButtonSide.RIGHT, utxd);
 					utxd.trySetState(ButtonSide.LEFT, PlugStackState.ALLDISPLAYED);
@@ -3219,7 +3234,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 				break;
 			}
 		}
-		insertTableRow("Status", tx.status == -1 ? "NEW" : (tx.status == 0 ? "MEMPOOL" : "Confirmed #" + tx.status) + (rbf ? " (RBF)" : ""));
+		insertTableRow("Status", (tx.status == Status.STATUS_CONFIRMED ? "CONFIRMED #" + tx.confblock : tx.status.desctx) + (rbf ? " (RBF)" : ""));
 		insertTableRow("Flow", tx.inputs.length + " in, " + tx.outputs.length + " out (" + satsAsBitcoin(tx.getInAmt()) + ", " + satsAsBitcoin(tx.getOutAmt()) + ")");
 
 		let sdr;
