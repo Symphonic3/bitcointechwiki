@@ -2799,7 +2799,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 						scrin,
 						document.createElement("br"),
 						document.createElement("br"),
-						textAsElement("ScriptHash (Hash160): "),
+						textAsElement("ScriptHash (SHA256): "),
 						document.createElement("br"),
 						document.createElement("br"),
 						shout
