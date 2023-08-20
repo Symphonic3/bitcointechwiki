@@ -1873,10 +1873,10 @@ class Plug {
 
 	}
 
-	connectLogically(index) {
+	connectLogically(index, side) {
 
 		if (!this.fullyConnected()) return true;
-		return this.childConnectLogically(index);
+		return this.childConnectLogically(index, side);
 
 	}
 
@@ -1913,7 +1913,7 @@ class Plug {
 		if (element.maxplugs <= (side == ButtonSide.LEFT ? element.rightPlugs : element.leftPlugs).length) return;
 		if (side == ButtonSide.LEFT) this.left = element;
 		else this.right = element;
-		if (this.connectLogically(index)) {
+		if (this.connectLogically(index, side)) {
 			element.addVisualPlug(side == ButtonSide.LEFT ? ButtonSide.RIGHT : ButtonSide.LEFT, this, index);
 		} else {
 			if (side == ButtonSide.LEFT) this.left = null;
@@ -2003,7 +2003,7 @@ class Plug {
 		throw new Error("This needs to be implemented by subclass!");
 	}
 
-	childConnectLogically(index) {
+	childConnectLogically(index, side) {
 		throw new Error("This needs to be implemented by subclass!");
 	}
 
@@ -2038,12 +2038,11 @@ class TransactionOutPlug extends Plug {
 
 	}
 
-	childConnectLogically(index) {
+	childConnectLogically(index, side) {
 
 		if (this.editable) {
 			let arr = this.left.transaction.outputs;
-			if (index != -1) arr.splice(index, 0, this.right.utxo);
-			else arr.push(this.right.utxo);
+			if (side == ButtonSide.LEFT) arr.splice(index, 0, this.right.utxo); else arr.splice(this.left.rightPlugs.indexOf(this), 0, this.right.utxo);
 			this.right.utxo.tx = this.left.transaction;
 		}
 
@@ -2087,15 +2086,14 @@ class TransactionInPlug extends Plug {
 
 	}
 
-	childConnectLogically(index) {
+	childConnectLogically(index, side) {
 
 		if (this.editable) {
 			if (!this.left.utxo.getTXID()) {
 				return false;
 			}
 			let arr = this.right.transaction.inputs;
-			if (index != -1) arr.splice(index, 0, this.left.utxo);
-			else arr.push(this.left.utxo);
+			if (side == ButtonSide.RIGHT) arr.splice(index, 0, this.left.utxo); else arr.splice(this.right.leftPlugs.indexOf(this), 0, this.left.utxo);
 			this.left.utxo.spendertx = this.right.transaction;
 		}
 
