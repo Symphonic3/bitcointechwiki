@@ -453,6 +453,10 @@ function draw() {
 						if (mouseIsPressed) {
 							uielements.remove(celement);
 							uielements.push(celement);
+						} else if (keyIsDown(8)) { //backspace
+							hoverElement = null;
+							uielements.remove(celement);
+							if (selectedItem == celement) clearTable();
 						}
 						break;
 					}
