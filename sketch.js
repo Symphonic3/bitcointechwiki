@@ -270,7 +270,7 @@ function setup() {
 	
 	let importtxbutton = new p5.Element(document.getElementById("addimporttx"));
 	importtxbutton.mouseClicked(function() {
-		let p = prompt("Enter Base64 PSBT");
+		let p = prompt("Enter Base64 PSBT:");
 		if (!p.startsWith("cHNid")) throw new Error("Obviously not PSBT"); //sanity check
 		let tx = loadTXPSBT(p);
 		let txd = new TransactionDisplay(
