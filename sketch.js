@@ -1761,6 +1761,8 @@ class InputOutputDisplayElement {
 	}
 
 	onRemoved() {
+		if (selectedItem == this) clearTable();
+		selectedItem = null;
 		let n2 = this.leftPlugs.length;
 		for (let i = 0; i < n2; i++) {
 			this.leftPlugs[0].sever();
