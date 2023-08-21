@@ -2273,7 +2273,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 		function getSequenceDesc() {
 
 			let nseq = utx.fullData.sequence;
-			let info = utx.fullData.isFlaggingDisableLocktimeSelf() ? "(Flagging disable nLocktime) " : "";
+			let info = utx.fullData.isFlaggingDisableLocktimeSelf() ? " (Flagging disable nLocktime) " : "";
 
 			if ((nseq & ((1 << 31) >>> 0)) != 0) {
 
