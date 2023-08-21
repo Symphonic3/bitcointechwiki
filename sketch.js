@@ -998,6 +998,80 @@ class UTXO {
 }
 
 //
+// TX/Coin duplication helpers
+//
+
+function duplicateCoin(coin) {
+	
+	let fd = coin.fullData ? new UTXOFullData(
+		coin.fullData.scriptsig,
+		coin.fullData.sequence,
+		[...coin.fullData.witness]
+	) : new UTXOFullData();
+	
+	return new UTXO(coin.scriptpubkey, coin.value, coin.status, coin.confblock, coin.txid, coin.outpoint, coin.spendertxid, fd, coin.tx, coin.spendertx, coin.loadablespender, coin.iscoinbase);
+	
+}
+
+function duplicateInputAsDetached(input) {
+	
+	let coin = duplicateCoin(input);
+	coin.loadablespender = false;
+	coin.status = Status.STATUS_COIN_DETACHED;
+	coin.confblock = -1;
+	
+	return coin;
+	
+}
+
+function duplicateOutputAsNew(output) {
+	
+	let coin = duplicateCoin(output);
+	coin.loadablespender = false;
+	coin.status = Status.STATUS_NEW;
+	coin.txid = null;
+	coin.tx = null;
+	
+	return coin;
+	
+}
+
+function duplicateTransaction(tx) {
+	
+	let ins = [];
+	for (let i = 0; i < tx.inputs.length; i++) {
+		ins[i] = duplicateCoin(tx.inputs[i]);
+	}
+	let outs = [];
+	for (let i = 0; i < tx.outputs.length; i++) {
+		outs[i] = duplicateCoin(tx.outputs[i]);
+	}
+	
+	return new Transaction(ins, outs, tx.version, tx.locktime, tx.status, tx.confblock);
+	
+}
+
+function duplicateTransactionAsNew(tx) {
+	
+	let transaction = new Transaction([], [], tx.version, tx.locktime, Status.STATUS_NEW, -1);
+	for (let i = 0; i < tx.inputs.length; i++) {
+		if (tx.inputs[i].status == Status.STATUS_COIN_SPENDABLE) {
+			transaction.inputs.push(duplicateCoin(tx.inputs[i]));
+		} else {
+			transaction.inputs.push(duplicateInputAsDetached(tx.inputs[i]));
+		}
+	}
+	for (let i = 0; i < tx.outputs.length; i++) {
+		let out = duplicateOutputAsNew(tx.outputs[i]);
+		out.tx = transaction;
+		transaction.outputs.push(out);
+	}
+	
+	return transaction;
+	
+}
+
+//
 // BitcoinJS tx loading
 //
 
@@ -1366,6 +1440,17 @@ document.addEventListener('touchend', function (e) {
 // UI CLASSES
 //
 
+class ContextButton {
+	
+	constructor(action, draw) {
+		
+		this.action = action;
+		this.draw = draw;
+		
+	}
+	
+}
+
 const PlugStackState = {
 
 	ALLDISPLAYED: 0,
@@ -1431,6 +1516,31 @@ class InputOutputDisplayElement {
 		this.maxplugs = maxplugs;
 
 		this.maxnheight = 0;
+		
+		this.contextbuttons = [];
+		const thiso = this;
+		this.contextbuttons.push(new ContextButton(function() {
+			
+			uielements.remove(thiso);
+			thiso.onRemoved();
+			
+		}, function(pi){
+			
+			//draw X
+			fill(thiso.colors.normalcolor);
+			stroke(thiso.colors.darkcolor);
+			strokeWeight(3 / canvasStepRatioY());
+			let p = cartToReal(new Point(pi.x, pi.y));
+			circle(p.x, p.y, 30 / canvasStepRatioY());
+			stroke(255, 0, 0);
+			let l1 = cartToReal(new Point(pi.x + 5, pi.y + 5));
+			let l2 = cartToReal(new Point(pi.x - 5, pi.y - 5));
+			let l3 = cartToReal(new Point(pi.x + 5, pi.y - 5));
+			let l4 = cartToReal(new Point(pi.x - 5, pi.y + 5));
+			line(l1.x, l1.y, l2.x, l2.y);
+			line(l3.x, l3.y, l4.x, l4.y);
+			
+		}));
 
 	}
 
@@ -1503,15 +1613,17 @@ class InputOutputDisplayElement {
 		let p = cartToReal(pi);
 
 		if (hoverElement == thiso) {
+			
+			for (let i = 0; i < thiso.contextbuttons.length; i++) {
+				
+				if ((((mouseX - (p.x - ((30/canvasStepRatioY())*i))) ** 2 + (mouseY - p.y) ** 2) < (16 / canvasStepRatioY()) ** 2) && (!mouseIsPressed || mouseClickedThisFrame)) {
 
-			if ((((mouseX - p.x) ** 2 + (mouseY - p.y) ** 2) < (16 / canvasStepRatioY()) ** 2) && (!mouseIsPressed || mouseClickedThisFrame)) {
-
-				decisionpointer = "pointer";
-				if (mouseClickedThisFrame) {
-
-					uielements.remove(thiso);
-					thiso.onRemoved();
-
+					decisionpointer = "pointer";	
+					
+					if (mouseClickedThisFrame) {
+						thiso.contextbuttons[i].action();
+					}
+				
 				}
 
 			}
@@ -1726,18 +1838,11 @@ class InputOutputDisplayElement {
 
 			if (decisionpointer == null) decisionpointer = "grab";
 
-			//draw X
-			fill(thiso.colors.normalcolor);
-			stroke(thiso.colors.darkcolor);
-			strokeWeight(3 / canvasStepRatioY());
-			circle(p.x, p.y, 30 / canvasStepRatioY());
-			stroke(255, 0, 0);
-			let l1 = cartToReal(new Point(pi.x + 5, pi.y + 5));
-			let l2 = cartToReal(new Point(pi.x - 5, pi.y - 5));
-			let l3 = cartToReal(new Point(pi.x + 5, pi.y - 5));
-			let l4 = cartToReal(new Point(pi.x - 5, pi.y + 5));
-			line(l1.x, l1.y, l2.x, l2.y);
-			line(l3.x, l3.y, l4.x, l4.y);
+			for (let i = 0; i < this.contextbuttons.length; i++) {
+				
+				this.contextbuttons[i].draw(new Point(pi.x - (30*i), pi.y));
+				
+			}
 
 			if (!buttoning && !drag && mouseIsPressed && !isPinching) {
 
@@ -2144,6 +2249,66 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 		this.trySetState(ButtonSide.LEFT, utxo.iscoinbase ? PlugStackState.ALLDISPLAYED : PlugStackState.MISSING);
 		this.trySetState(ButtonSide.RIGHT, PlugStackState.MISSING);
+
+		const thiso = this;
+		if(utxo.status != Status.STATUS_NEW && utxo.status != Status.STATUS_COIN_DETACHED) this.contextbuttons.push(new ContextButton(function() {
+
+			uielements.push(new UTXODisplay(new Point(thiso.getBounds().pos.x + 100, thiso.getBounds().pos.y + thiso.getBounds().height + 75), duplicateCoin(utxo), mutable));
+			
+		}, function(pi){
+			
+			//draw duplicate icon
+			fill(thiso.colors.normalcolor);
+			stroke(thiso.colors.darkcolor);
+			strokeWeight(3 / canvasStepRatioY());
+			let p = cartToReal(new Point(pi.x, pi.y));
+			circle(p.x, p.y, 30 / canvasStepRatioY());
+			let l1 = cartToReal(new Point(pi.x - 6, pi.y - 6));
+			let l3 = cartToReal(new Point(pi.x - 1, pi.y - 1));
+			rect(l1.x, l1.y, 7/canvasStepRatioX(), 7/canvasStepRatioY());
+			rect(l3.x, l3.y, 7/canvasStepRatioX(), 7/canvasStepRatioY());
+			
+		}));
+		
+		this.contextbuttons.push(new ContextButton(function() {
+			
+			uielements.push(new UTXODisplay(new Point(thiso.getBounds().pos.x + 100, thiso.getBounds().pos.y + thiso.getBounds().height + 75), duplicateOutputAsNew(utxo), MutabilityType.ALL));
+			
+		}, function(pi){
+			
+			//draw duplicate icon in new colors
+			fill(Status.STATUS_NEW.colors.normalcolor);
+			stroke(Status.STATUS_NEW.colors.darkcolor);
+			strokeWeight(3 / canvasStepRatioY());
+			let p = cartToReal(new Point(pi.x, pi.y));
+			circle(p.x, p.y, 30 / canvasStepRatioY());
+			let l1 = cartToReal(new Point(pi.x - 6, pi.y - 6));
+			let l3 = cartToReal(new Point(pi.x - 1, pi.y - 1));
+			rect(l1.x, l1.y, 7/canvasStepRatioX(), 7/canvasStepRatioY());
+			rect(l3.x, l3.y, 7/canvasStepRatioX(), 7/canvasStepRatioY());
+			
+		}));
+		
+		this.contextbuttons.push(new ContextButton(function() {
+			
+			let utxd = new UTXODisplay(new Point(thiso.getBounds().pos.x + 100, thiso.getBounds().pos.y + thiso.getBounds().height + 75), duplicateInputAsDetached(utxo), MutabilityType.OUTPUTSONLY);
+			utxd.trySetState(ButtonSide.LEFT, PlugStackState.ALLDISPLAYED);
+			uielements.push(utxd);
+			
+		}, function(pi){
+			
+			//draw duplicate icon in detached colors
+			fill(Status.STATUS_COIN_DETACHED.colors.normalcolor);
+			stroke(Status.STATUS_COIN_DETACHED.colors.darkcolor);
+			strokeWeight(3 / canvasStepRatioY());
+			let p = cartToReal(new Point(pi.x, pi.y));
+			circle(p.x, p.y, 30 / canvasStepRatioY());
+			let l1 = cartToReal(new Point(pi.x - 6, pi.y - 6));
+			let l3 = cartToReal(new Point(pi.x - 1, pi.y - 1));
+			rect(l1.x, l1.y, 7/canvasStepRatioX(), 7/canvasStepRatioY());
+			rect(l3.x, l3.y, 7/canvasStepRatioX(), 7/canvasStepRatioY());
+			
+		}));
 
 	}
 
@@ -3058,6 +3223,52 @@ class TransactionDisplay extends InputOutputDisplayElement {
 
 		this.loadedinputs = [];
 		this.loadedoutputs = [];
+		
+		const thiso = this;
+		if(transaction.status != Status.STATUS_NEW) this.contextbuttons.push(new ContextButton(function() {
+
+			uielements.push(new TransactionDisplay(new Point(thiso.getBounds().pos.x + 200, thiso.getBounds().pos.y + thiso.getBounds().height + 100), duplicateTransaction(transaction), mutable));
+			
+		}, function(pi){
+			
+			//draw duplicate icon
+			fill(thiso.colors.normalcolor);
+			stroke(thiso.colors.darkcolor);
+			strokeWeight(3 / canvasStepRatioY());
+			let p = cartToReal(new Point(pi.x, pi.y));
+			circle(p.x, p.y, 30 / canvasStepRatioY());
+			let l1 = cartToReal(new Point(pi.x - 6, pi.y - 6));
+			let l3 = cartToReal(new Point(pi.x - 1, pi.y - 1));
+			rect(l1.x, l1.y, 7/canvasStepRatioX(), 7/canvasStepRatioY());
+			rect(l3.x, l3.y, 7/canvasStepRatioX(), 7/canvasStepRatioY());
+			
+		}));
+		
+		this.contextbuttons.push(new ContextButton(function() {
+			
+			let txd = new TransactionDisplay(
+				new Point(thiso.getBounds().pos.x + 200, thiso.getBounds().pos.y + thiso.getBounds().height + 100),
+				duplicateTransactionAsNew(transaction),
+				MutabilityType.ALL
+			);
+			txd.addButtonPushed(ButtonSide.LEFT, true);
+			txd.addButtonPushed(ButtonSide.RIGHT, true);
+			uielements.push(txd);
+			
+		}, function(pi){
+			
+			//draw duplicate icon in new colors
+			fill(Status.STATUS_NEW.colors.normalcolor);
+			stroke(Status.STATUS_NEW.colors.darkcolor);
+			strokeWeight(3 / canvasStepRatioY());
+			let p = cartToReal(new Point(pi.x, pi.y));
+			circle(p.x, p.y, 30 / canvasStepRatioY());
+			let l1 = cartToReal(new Point(pi.x - 6, pi.y - 6));
+			let l3 = cartToReal(new Point(pi.x - 1, pi.y - 1));
+			rect(l1.x, l1.y, 7/canvasStepRatioX(), 7/canvasStepRatioY());
+			rect(l3.x, l3.y, 7/canvasStepRatioX(), 7/canvasStepRatioY());
+			
+		}));
 
 	}
 
