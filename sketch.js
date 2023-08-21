@@ -1020,6 +1020,12 @@ function duplicateInputAsDetached(input) {
 	coin.status = Status.STATUS_COIN_DETACHED;
 	coin.confblock = -1;
 	
+	if (coin.tx) {
+		let i = input.tx.outputs.indexOf(input);
+		coin.tx = duplicateTransaction(coin.tx);
+		coin.tx.outputs[i] = coin;
+	}
+	
 	return coin;
 	
 }
@@ -1031,6 +1037,7 @@ function duplicateOutputAsNew(output) {
 	coin.status = Status.STATUS_NEW;
 	coin.txid = null;
 	coin.tx = null;
+	coin.outpoint = null;
 	
 	return coin;
 	
