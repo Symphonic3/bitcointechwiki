@@ -456,6 +456,7 @@ function draw() {
 						} else if (keyIsDown(8)) { //backspace
 							hoverElement = null;
 							uielements.remove(celement);
+							celement.onRemoved();
 							if (selectedItem == celement) clearTable();
 						}
 						break;
