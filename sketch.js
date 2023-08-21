@@ -3244,8 +3244,13 @@ class TransactionDisplay extends InputOutputDisplayElement {
 		let edr;
 
 		async function getExport() {
-
-			let pbt = await tx.getPsbt();
+			let pbt;
+			
+			try {
+				pbt = await tx.getPsbt();
+			} catch (e) {
+				pbt = e.message;
+			}
 			
 			let rawd = HTMLInput("", tx.getBitcoin().toHex(), false, null, "textarea");
 			
