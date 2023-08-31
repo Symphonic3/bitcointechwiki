@@ -338,10 +338,387 @@ function setup() {
 		clearTable();
 		
 		selchain = chainparams[ind];
+		
+		loadKeyData();
 
 	});
 	
+	//keys
+	
+	let hide = document.getElementById("hide");
+	new p5.Element(hide).mouseClicked(function() {
+		keysholder.style.display = "none";
+		hide.style.display = "none";
+	});
+	
+	let importBtn = document.getElementById("importkeybtn");
+	new p5.Element(importBtn).mouseClicked(function() {
+		let it = ImportType[importTypeSelector.selectedIndex];
+		let kin = it.load();
+		keys.push(kin);
+		saveKeyData();
+		refreshKeysDisplay();
+	});
+	
+	let keysbtn = document.getElementById("keys");
+	new p5.Element(keysbtn).mouseClicked(function() {
+		keysholder.style.display  = "block";
+		hide.style.display = "inline";
+	});
+	
+	let importTypeSelector = document.getElementById("importtypeselector");
+	importTypeSelector.innerHTML = "";
+	for (let i = 0; i < ImportType.length; i++) {
+		let impType = ImportType[i];
+		let option = document.createElement("option");
+		option.value = impType.name;
+		option.text = impType.name;
+		importTypeSelector.appendChild(option);
+	}
+	
+	loadKeyData();
+	
 }
+
+//
+// key management
+//
+
+let signing = null;
+
+let keys = [];
+
+function getKeysCookieString() {
+	return "bitcointechwiki_keys_///" + selchain.id;
+}
+
+function loadKeyData() {
+	
+	let cookiestring = getKeysCookieString();
+	let item = getItem(cookiestring);
+	if (item == null) item = [];
+	
+	keys = item;
+	
+	let keysholder = document.getElementById("keysholder");
+	keysholder.style.display = "none";
+	let hide = document.getElementById("hide");
+	hide.style.display = "none";
+	
+	signing = null;
+	
+	refreshKeysDisplay();
+	
+}
+
+function saveKeyData() {
+	
+	let cookiestring = getKeysCookieString();
+	let item = storeItem(cookiestring, keys);
+	
+}
+
+function getSimpleKeyDisplay(key) {
+	let element = document.createElement("div");
+	
+	let ret = "";
+	let ecp = ecpair.ECPairFactory(secp256k1).fromPrivateKey(Buffer.from(key.key, "hex"), {network: selchain.bnet, compressed: key.compressed});
+	let ident = bitcoin.crypto.hash160(ecp.publicKey);
+	ret += "<p style=\"font-size:25px\"><b>Simple: " + ident.toString("hex").slice(0, 8).toUpperCase() + "</b></p>";
+	ret += "<p class=\"warning\"><b>Private Key:</b></br>" + ecp.privateKey.toString("hex") + "</br>" + "<b>Private Key (WIF):</b></br>" + ecp.toWIF() + "</p>";
+	ret += "<p><b>Public Key:</b></br>" + ecp.publicKey.toString("hex") + "</p>";
+	ret += "<p><b>p2pkh:</b> " + bitcoin.payments.p2pkh({pubkey: ecp.publicKey, network: selchain.bnet}).address;
+	if (key.compressed) ret	+= "</br><b>p2wpkh:</b> " + bitcoin.payments.p2wpkh({pubkey: ecp.publicKey, network: selchain.bnet}).address;
+	ret += "</p>";
+	element.innerHTML = ret;
+	
+	let sighashselect = document.createElement("select");
+	sighashselect.addEventListener("change", () => signing = null);
+	
+	let drp2Options = ["ALL", "NONE", "SINGLE", "ALL|ANYONECANPAY", "NONE|ANYONECANPAY", "SINGLE|ANYONECANPAY"];
+	for (let i = 0; i < drp2Options.length; i++) {
+		let option = document.createElement("option");
+		option.value = drp2Options[i];
+		option.text = drp2Options[i];
+		sighashselect.appendChild(option);
+	}
+	
+	element.appendChild(sighashselect);
+	
+	let signbtn = document.createElement("button");
+	signbtn.innerHTML = "Sign";
+	new p5.Element(signbtn).mouseClicked(function() {
+		signing = {key: key, selhash: sighashselect.selectedIndex};
+	});
+	element.appendChild(signbtn);
+	
+	return {element: element, ident: ident};
+}
+
+function getExtendedKeyDisplay(key) {
+	let element = document.createElement("div");
+	
+	let derivkey = ecbip32.BIP32Factory(secp256k1).fromPrivateKey(Buffer.from(key.key, "hex"), Buffer.from(key.chaincode, "hex"), selchain.bnet);
+	derivkey.__DEPTH = key.depth;
+	derivkey.__INDEX = key.childn;
+	derivkey.__PARENT_FINGERPRINT = key.parentfing;
+	let ident = derivkey.identifier; //note that seeded key fingerprints will not match with the fingerprints of an extended key imported from their extended private key as the displayed extended private key comes from the derivation path, whereas this identifier comes from the master extended private key (sans derivation)
+	
+	let ret = "";
+	ret += "<p style=\"font-size:25px\"><b>Extended: " + ident.toString("hex").slice(0, 8).toUpperCase() + "</b></p>";
+	ret += "<p class=\"warning\"><b>Raw Private Key:</b></br>" + derivkey.privateKey.toString("hex") + "<br/><b>" + "Extended Private Key:</b></br>" + derivkey.toBase58() + "</p>";
+	element.innerHTML = ret;
+	
+	addExtendedKeyKeys(key, element);
+	
+	return {element: element, ident: ident};
+	
+}
+
+function addExtendedKeyKeys(key, element) {
+	
+	let loadchildbtn = document.createElement("button");
+	loadchildbtn.innerHTML = "Load Child";
+	new p5.Element(loadchildbtn).mouseClicked(function () {
+		let index = prompt("Enter child index:");
+		key.showchildren = key.showchildren.filter(item => item.n != parseInt(index) || item.hardened != false);
+		key.showchildren.push({n: parseInt(index), hardened: false});
+		saveKeyData();
+		refreshKeysDisplay();
+	});
+	element.appendChild(loadchildbtn);
+	
+	let loadhardenedchildbtn = document.createElement("button");
+	loadhardenedchildbtn.innerHTML = "Load Hardened Child";
+	new p5.Element(loadhardenedchildbtn).mouseClicked(function () {
+		let index = prompt("Enter hardened child index:");
+		key.showchildren = key.showchildren.filter(item => item.n != parseInt(index) || item.hardened != true);
+		key.showchildren.push({n: parseInt(index), hardened: true});
+		saveKeyData();
+		refreshKeysDisplay();
+	});
+	element.appendChild(loadhardenedchildbtn);
+	
+	element.appendChild(document.createElement("br"));
+	element.appendChild(document.createElement("br"));
+	
+	let derivkey = ecbip32.BIP32Factory(secp256k1).fromPrivateKey(Buffer.from(key.key, "hex"), Buffer.from(key.chaincode, "hex"), selchain.bnet);
+	derivkey.__DEPTH = key.depth;
+	derivkey.__INDEX = key.childn;
+	derivkey.__PARENT_FINGERPRINT = key.parentfing;
+	
+	for (let i = 0; i < key.showchildren.length; i++) {
+		let c = key.showchildren[i];
+		let child = (c.hardened ? derivkey.derive(c.n) : derivkey.deriveHardened(c.n));
+		let kd = getSimpleKeyDisplay(new SimpleKey(child.privateKey.toString("hex")));
+		let xbutton = document.createElement("button");
+		kd.element.firstChild.innerHTML += " (" + c.n + (c.hardened ? "'" : "") + ")";
+		xbutton.className = "keydisplayclosebutton";
+		xbutton.innerHTML = "X";
+		new p5.Element(xbutton).mouseClicked(function() {
+			key.showchildren.remove(c);
+			saveKeyData();
+			refreshKeysDisplay();
+		});
+		kd.element.insertBefore(xbutton, kd.element.firstChild);
+		styleElementWithIdentifierColor(kd.element, kd.ident);
+		element.appendChild(kd.element);
+		
+	}
+	
+}
+
+function getSeedDisplay(seed) {
+	let element = document.createElement("div");
+	
+	if (!ecbip39.validateMnemonic(seed.seed)) throw new Error("Loading bad mnemonic");
+	let valseed = ecbip39.mnemonicToSeedSync(seed.seed, seed.pass);
+	let hd = ecbip32.BIP32Factory(secp256k1).fromSeed(valseed, selchain.bnet);
+	let selxpriv = hd.derivePath(seed.path);
+	let ident = hd.identifier; //ignore derivation path as is standard
+	
+	let ret = "";
+	ret += "<p style=\"font-size:25px\"><b>Seed: " + ident.toString("hex").slice(0, 8).toUpperCase() + "</b></p>";
+	ret += "<p class=\"warning\"><b>Seed Phrase:</b></br>" + seed.seed + "<br/><b>" + (seed.pass.length > 0 ? "BIP39 Passphrase:</b></br>" + seed.pass + "</br><b>" : "") + "Derivation Path:</b></br>" + seed.path + "</br><b>Extended Private Key:</b></br>" + selxpriv.toBase58() + "</p>";
+	element.innerHTML = ret;
+	
+	addExtendedKeyKeys(seed.xkey, element);
+	
+	return {element: element, ident: ident};
+}
+
+function refreshKeysDisplay() {
+	
+	signing = null;
+	
+	let keysbtn = document.getElementById("keys");
+	keysbtn.innerHTML = selchain.id + " Keys (" + keys.length + ")";
+	let keysholderinner = document.getElementById("keysholderinner");
+	keysholderinner.innerHTML = "";
+	
+	for (let i = 0; i < keys.length; i++) {
+		let savkey = keys[i];
+		let kd;
+		backgroundColor = "hsl(155,100%,30%)"
+		if (savkey.mode == KeyMode.SIMPLE) {
+			kd = getSimpleKeyDisplay(savkey);
+		} else if (savkey.mode == KeyMode.HD_EXTENDED_KEY) {
+			kd = getExtendedKeyDisplay(savkey);
+		} else if (savkey.mode == KeyMode.HD_SEED) {
+			kd = getSeedDisplay(savkey);
+		}
+		let xbutton = document.createElement("button");
+		xbutton.className = "keydisplayclosebutton";
+		xbutton.innerHTML = "X";
+		new p5.Element(xbutton).mouseClicked(function() {
+			keys.remove(savkey);
+			saveKeyData();
+			refreshKeysDisplay();
+		});
+		kd.element.insertBefore(xbutton, kd.element.firstChild);
+		styleElementWithIdentifierColor(kd.element, kd.ident);
+		keysholderinner.appendChild(kd.element);
+	}
+	
+}
+
+function styleElementWithIdentifierColor(element, ident){
+	element.style.backgroundColor = "hsl(" + ((ident[0]/256)*360) + ",64%,85%)";
+}
+
+const KeyMode = {
+
+	HD_SEED: 0,
+	HD_EXTENDED_KEY: 1,
+	SIMPLE: 2,
+
+}
+
+class SimpleKey {
+	mode = KeyMode.SIMPLE;
+	
+	constructor(key, compressed = false, forcedtypes = null) {
+		
+		this.key = key; //hex-encoded private key
+		this.forcedtypes = forcedtypes;
+		this.compressed = compressed;
+		
+	}
+	
+}
+
+class ExtendedKey {
+	mode = KeyMode.HD_EXTENDED_KEY;
+	
+	constructor(key, chaincode, parentfing = null, depth = null, childn = null, forcedtypes = null) {
+		
+		this.key = key; //32-byte hex private key (typical 0x00 byte at start is dropped)
+		this.chaincode = chaincode; //32-byte hex
+		
+		this.forcedtypes = forcedtypes; //derive from version
+		
+		this.depth = depth;
+		this.childn = childn;
+		this.parentfing = parentfing;
+		
+		this.showchildren = []; //array of {n: int, hardened: bool}
+		
+	}
+	
+}
+
+class SeededKey {
+	mode = KeyMode.HD_SEED;
+	
+	constructor(seed, pass, path, xkey, forcedtypes = null) {
+		
+		this.seed = seed; //hex-encoded seed (64 bytes (512 bits))
+		this.pass = pass;
+		this.path = path; //standard human readable derivation path string
+		this.xkey = xkey;
+		this.forcedtypes = forcedtypes;
+		
+	}
+	
+}
+
+const ImportType = [
+	
+	{
+		mode: KeyMode.SIMPLE,
+		name: "WIF",
+		load: function() { 
+			let wif = ecpair.ECPairFactory(secp256k1).fromWIF(prompt("WIF:"), selchain.bnet);
+			return new SimpleKey(wif.privateKey.toString("hex"), wif.compressed);
+		}
+	},
+	{ 
+		mode: KeyMode.SIMPLE,
+		name: "Raw",
+		load: function(){
+			let inp = Buffer.from(prompt("Private Key (Hex):"), "hex");
+			return new SimpleKey(ecpair.ECPairFactory(secp256k1).fromPrivateKey(inp, {network: selchain.bnet}).privateKey.toString("hex"), true);
+		}
+	},
+		{ 
+		mode: KeyMode.SIMPLE,
+		name: "Raw (Uncompressed)",
+		load: function(){
+			let inp = Buffer.from(prompt("Private Key (Hex):"), "hex");
+			return new SimpleKey(ecpair.ECPairFactory(secp256k1).fromPrivateKey(inp, {network: selchain.bnet}).privateKey.toString("hex"), false);
+		}
+	},
+	/*{ 
+		mode: KeyMode.SIMPLE,
+		name: "Raw Pubkey",
+		watchonly: true,
+		load: function(){
+			
+			
+		}
+	},*/
+	{
+		mode: KeyMode.HD_SEED,
+		name: "Hierarchical Deterministic",
+		load: function(){
+			let seed = prompt("BIP39 mnemonic (seed phrase) or raw BIP32 entropy (16/32 bytes, hex)").toLowerCase();
+			let seedphraseout;
+			let passout = "";
+			if (ecbip39.validateMnemonic(seed)) { //BIP39
+				let pass = prompt("BIP39 Passphrase (leave empty if none):").toLowerCase();
+				seedphraseout = ecbip39.entropyToMnemonic(ecbip39.mnemonicToEntropy(seed)); //standardize
+				passout = pass;
+			} else if (seed.length == 32 || seed.length == 64) { //16/32 byte entropy or bad input
+				
+				seedphraseout = ecbip39.entropyToMnemonic(seed); //throws if invalid
+				
+			} else throw new Error("Bad HD import input");
+			
+			let hd = ecbip32.BIP32Factory(secp256k1).fromSeed(ecbip39.mnemonicToSeedSync(seedphraseout, passout), selchain.bnet); //validation
+			let deriv = prompt("Derivation path:").toLowerCase();
+			let selxpriv = hd.derivePath(deriv); //validation
+			return new SeededKey(seedphraseout, passout, deriv, new ExtendedKey(selxpriv.privateKey.toString("hex"), selxpriv.chainCode.toString("hex")));
+		}
+	},
+	{
+		mode: KeyMode.HD_EXTENDED_KEY,
+		name: "X/Y/Z(T/U/V) Priv",
+		load: function(){
+			let xyzpriv = prompt("Enter extended private key:");
+			let hd = ecbip32.BIP32Factory(secp256k1).fromBase58(xyzpriv);
+			return new ExtendedKey(hd.privateKey.toString("hex"), hd.chainCode.toString("hex"), hd.parentFingerprint, hd.depth, hd.index);
+		}
+	},
+	/*{ 
+		mode: KeyMode.SIMPLE,
+		name: "X/Y/Z(T/U/V) Pub",
+		load: function(){
+			
+			
+		}
+	}*/
+	
+];
 
 //
 // VISUAL HELPER FUNCTIONS
@@ -402,16 +779,27 @@ function insertTableRowEV(key, value) {
 
 let btnHover = false;
 
+let mousePressedReal = false;
+
+function setPrimaryButtonState(e) {
+  var flags = e.buttons !== undefined ? e.buttons : e.which;
+  mousePressedReal = (flags & 1) === 1;
+}
+
+document.addEventListener("mousedown", setPrimaryButtonState);
+document.addEventListener("mousemove", setPrimaryButtonState);
+document.addEventListener("mouseup", setPrimaryButtonState);
+
 let slowFrameRate = 0;
 function draw() {
 	if (frameCount % 10 == 0) slowFrameRate = frameRate();
 	mouseInBounds = (mouseX > 0 && mouseY > 0 && mouseX < width && mouseY < height);
-
+	
 	if (mouseInBounds) {
-
-		mouseClickedThisFrame = (!pMouseIsPressed && mouseIsPressed);
-		mouseDroppedThisFrame = (pMouseIsPressed && !mouseIsPressed);
-
+		
+		mouseClickedThisFrame = (!pMouseIsPressed && mousePressedReal);
+		mouseDroppedThisFrame = (pMouseIsPressed && !mousePressedReal);
+		
 	} else {
 
 		mouseClickedThisFrame = false;
@@ -432,7 +820,7 @@ function draw() {
 	let nr = n * 1.3;
 	let pi = new Point(width - n, height - n);
 
-	if ((!mouseIsPressed || mouseClickedThisFrame) && !isPinching) {
+	if ((!mousePressedReal || mouseClickedThisFrame) && !isPinching) {
 
 		/*//determine plus button
 		if ( ( ((mouseX-pi.x)**2) + ((mouseY-pi.y)**2) ) < (nr/2)**2) {
@@ -450,7 +838,7 @@ function draw() {
 					let celement = uielements[i];
 					if (celement.test(mCart)) {
 						hoverElement = celement;
-						if (mouseIsPressed) {
+						if (mousePressedReal) {
 							uielements.remove(celement);
 							uielements.push(celement);
 						} else if (keyIsDown(8)) { //backspace
@@ -467,7 +855,7 @@ function draw() {
 
 	}
 
-	if (mouseInBounds && mouseIsPressed && !btnHover && !drag) {
+	if (mouseInBounds && mousePressedReal && !btnHover && !drag && !signing) {
 		let deltaX = isPinching ? pinchCenX - prevPinchCenX : mouseX - pmouseX;
 		let deltaY = isPinching ? pinchCenY - prevPinchCenY : mouseY - pmouseY;
 		
@@ -477,6 +865,117 @@ function draw() {
 			spawns = 0;
 		}
 
+	}
+	
+	signlogic: if (mouseClickedThisFrame && signing) {
+		
+		if (hoverElement) {
+			
+			if (hoverElement.utxo) {
+				
+				let utx = hoverElement.utxo;
+				
+				if (utx.spendertx && utx.fullData) { //TODO taproot (2)
+					
+					let btx = utx.spendertx.getBitcoin();
+					
+					let ind = utx.spendertx.inputs.indexOf(utx);
+					
+					let scriptHex = utx.scriptpubkey;
+					let add = utx.getAddress();
+					let atype = getAddressType(add);
+					let prevOutScript = Buffer.from(scriptHex, 'hex');
+					
+					let hashType;
+					if (signing.selhash == 0) hashType = bitcoin.Transaction.SIGHASH_ALL; else
+					if (signing.selhash == 1) hashType = bitcoin.Transaction.SIGHASH_NONE; else
+					if (signing.selhash == 2) hashType = bitcoin.Transaction.SIGHASH_SINGLE; else
+					if (signing.selhash == 3) hashType = bitcoin.Transaction.SIGHASH_ALL | bitcoin.Transaction.SIGHASH_ANYONECANPAY; else
+					if (signing.selhash == 4) hashType = bitcoin.Transaction.SIGHASH_NONE | bitcoin.Transaction.SIGHASH_ANYONECANPAY; else
+					if (signing.selhash == 5) hashType = bitcoin.Transaction.SIGHASH_SINGLE | bitcoin.Transaction.SIGHASH_ANYONECANPAY;
+					
+					let value = utx.getValue();
+					
+					let signfinal;
+					
+					let key = signing.key;
+					
+					let ecp = ecpair.ECPairFactory(secp256k1).fromPrivateKey(Buffer.from(key.key, "hex"), {network: selchain.bnet, compressed: key.compressed});
+					
+					let keyAddp2pkh = bitcoin.payments.p2pkh({pubkey: ecp.publicKey, network: selchain.bnet}).address;
+					let keyAddp2wpkh = !key.compressed ? null : bitcoin.payments.p2wpkh({pubkey: ecp.publicKey, network: selchain.bnet}).address;
+					
+					if (
+						(atype == "p2pkh" && keyAddp2pkh != add) ||
+						(atype == "p2wpkh" && keyAddp2wpkh != add)
+					) {
+							
+						alert("Key does not belong to that input.");
+						signing = null;
+						break signlogic;
+					}
+					
+					if (atype == "p2pkh" || atype == "Unknown") {
+						signfinal = btx.hashForSignature(ind, prevOutScript, hashType);
+					} else if (atype == "p2wpkh") {
+						signfinal = btx.hashForWitnessV0(
+							ind, bitcoin.script.compile([
+								bitcoin.opcodes.OP_DUP,
+								bitcoin.opcodes.OP_HASH160,
+								bitcoin.script.decompile(prevOutScript)[1],
+								bitcoin.opcodes.OP_EQUALVERIFY,
+								bitcoin.opcodes.OP_CHECKSIG
+							]), value, hashType
+						);
+					} else if (atype == "p2sh" || atype == "p2wsh") {
+						let scriptasm = prompt("Enter unhashed locking script:");
+						if (!scriptasm || scriptasm.length == 0) {
+							break signlogic;
+						}
+						let scriptcode = bitcoin.script.fromASM(scriptasm);
+						
+						if (atype == "p2sh") {
+							signfinal = btx.hashForSignature(ind, scriptcode, hashType);
+						} else if (atype == "p2wsh") {
+							signfinal = btx.hashForWitnessV0(ind, scriptcode, value, hashType);
+						}
+						
+					} else {
+						alert("Signing that input type is not yet supported.");
+						signing = null;
+						break signlogic;
+					}
+					
+					let sig = bitcoin.script.signature.encode(ecp.sign(signfinal, true), hashType).toString("hex");
+					let pubkey = ecp.publicKey.toString("hex");
+					
+					if (atype == "p2pkh") { //autosig
+						utx.fullData.scriptsig = bitcoin.script.fromASM(sig + " " + pubkey).toString("hex");
+					} else if (atype == "p2wpkh") {
+						utx.fullData.witness = [sig, pubkey];
+					} else {
+						utx.fullData._recentSig = {
+							sig: sig,
+							pubkey: pubkey
+						};
+					}
+					
+					if (selectedItem == hoverElement) selectedItem.onFocused();
+					
+				} else {
+					
+					alert("Failed to find connected TX for signing.");
+					signing = null;
+					break signlogic;
+					
+				}
+				
+			}
+			
+		} 
+		
+		signing = null;
+		
 	}
 
 	if (
@@ -545,7 +1044,7 @@ function draw() {
   }
   //draw plus button		
   strokeWeight(0);
-  fill(btnHover ? (mouseIsPressed ? 210 : 230) : 255);
+  fill(btnHover ? (mousePressedReal ? 210 : 230) : 255);
   circle(pi.x, pi.y, nr);
   fill(67,136,214);
   rect(pi.x - nr/4, pi.y - nr/16, nr/2, nr/8);
@@ -614,6 +1113,20 @@ function draw() {
 
 	}
 	
+	if (signing) {
+		fill(0);
+		strokeWeight(0);
+		textSize(canvasBounds.x/20);
+		textAlign(CENTER, TOP);
+		
+		let ecp = ecpair.ECPairFactory(secp256k1).fromPrivateKey(Buffer.from(signing.key.key, "hex"), {network: selchain.bnet, compressed: signing.key.compressed});
+		let ident = bitcoin.crypto.hash160(ecp.publicKey);
+		let fingerprint = ident.toString("hex").slice(0, 8).toUpperCase();
+		
+		text("Click an input to sign with key " + fingerprint, canvasBounds.x/2, canvasBounds.y/40);
+		
+	}
+	
 	if (showfps) {
 		fill(0);
 		strokeWeight(0);
@@ -624,14 +1137,14 @@ function draw() {
 
 	//utility
 
-	if (!_cursorSetFrame) setCursor(mouseIsPressed ? "grabbing" : "move");
+	if (!_cursorSetFrame) setCursor(mousePressedReal ? "grabbing" : "move");
 	if (!_titleSetFrame) setTitle(null);
 
 	cursor(_ncursor == null ? "auto" : _ncursor);
 	if (_ntitle == null) canvas.elt.removeAttribute("title");
 	else canvas.elt.title = _ntitle;
 
-	pMouseIsPressed = mouseIsPressed;
+	pMouseIsPressed = mousePressedReal;
 	wheelDelta = 0;
 }
 
@@ -1623,7 +2136,7 @@ class InputOutputDisplayElement {
 			
 			for (let i = 0; i < thiso.contextbuttons.length; i++) {
 				
-				if ((((mouseX - (p.x - ((30/canvasStepRatioY())*i))) ** 2 + (mouseY - p.y) ** 2) < (16 / canvasStepRatioY()) ** 2) && (!mouseIsPressed || mouseClickedThisFrame)) {
+				if ((((mouseX - (p.x - ((30/canvasStepRatioY())*i))) ** 2 + (mouseY - p.y) ** 2) < (16 / canvasStepRatioY()) ** 2) && (!mousePressedReal || mouseClickedThisFrame)) {
 
 					decisionpointer = "pointer";	
 					
@@ -1742,7 +2255,7 @@ class InputOutputDisplayElement {
 				let jbounds = new BoundingBox(new Point(context.xoffset, this.topOffset + j * (this.rowHeight + this.rowMargin)), this.rowWidth, this.rowHeight);
 				let jboundsabs = new BoundingBox(new Point(jbounds.pos.x + this.getBounds().pos.x, jbounds.pos.y + this.getBounds().pos.y), jbounds.width, jbounds.height);
 				let kbl = pointInBox(realToCart(new Point(mouseX, mouseY)), jboundsabs) && hoverElement == this;
-				if (kbl && !mouseIsPressed) {
+				if (kbl && !mousePressedReal) {
 
 					decisiontitle = this.produceAltText(context.side, cdata.type);
 					decisionpointer = "pointer";
@@ -1765,7 +2278,7 @@ class InputOutputDisplayElement {
 									}
 								};
 							}
-							if (mouseIsPressed) {
+							if (mousePressedReal) {
 								hstate = HighlightState.NORMAL;
 							} else {
 								hstate = HighlightState.HOVER;
@@ -1782,7 +2295,7 @@ class InputOutputDisplayElement {
 							buttoning = true;
 							cdata.action();
 						}
-						if (mouseIsPressed) {
+						if (mousePressedReal) {
 							hstate = HighlightState.PRESSED;
 						} else {
 							hstate = HighlightState.HOVER;
@@ -1851,7 +2364,7 @@ class InputOutputDisplayElement {
 				
 			}
 
-			if (!buttoning && !drag && mouseIsPressed && !isPinching) {
+			if (!buttoning && !drag && mousePressedReal && mouseInBounds && !isPinching) {
 
 				decisionpointer = "grabbing";
 				let deltaX = mouseX - pmouseX;
@@ -2641,6 +3154,25 @@ class UTXODisplay extends InputOutputDisplayElement {
 			]));
 
 		}
+		
+		let recSig = (utx.fullData && utx.fullData._recentSig) ?
+			joinElements([
+				textAsElement("Recently created signature: "),
+				document.createElement("br"),
+				document.createElement("br"),
+				textAsElement(utx.fullData._recentSig.sig),
+				document.createElement("br"),
+				document.createElement("br"),
+				textAsElement("Pubkey: "),
+				document.createElement("br"),
+				document.createElement("br"),
+				textAsElement(utx.fullData._recentSig.pubkey)
+			])
+		:
+			null;
+			
+		let recentSig = insertTableRowEV("Recent Signature", recSig ? recSig : textAsElement(""));
+		if (!recSig) recentSig.parentElement.style.display = "none";
 
 		let thiso = this;
 

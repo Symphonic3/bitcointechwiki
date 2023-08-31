@@ -138,7 +138,7 @@
         .tab-content h2 {
 			cursor: pointer;
         }
-		.tab-content p {
+		.tab-content>p {
 			font-size: 20px;
         }
          @keyframes flash {
@@ -231,6 +231,72 @@
 			display: flex;
 			align-items: center;
 			justify-content: center;
+		}
+		
+		.center {
+			margin: auto;
+			margin-bottom: 1em;
+			width: 95%;
+			max-width: 1300px;
+			column-count: auto;
+			column-width: min(100vw, 420px);
+			column-rule-style: dotted;
+		
+		}
+		
+		.center div {
+			position: relative;
+			background: #f1f1f1;
+			margin-left: auto;
+			margin-right: auto;
+			margin-bottom: 1em;
+			padding: 1em;
+			border-radius: 20px;
+			text-align: center;
+			width: 90%;
+			max-width: 90%;
+			break-inside: avoid
+		}
+		
+		.center>div {
+			outline-style: solid;
+		}
+		
+		.center>div>div {
+			box-shadow: 5px 5px;
+		
+		}
+		
+		.center p {
+			text-align: center;
+			overflow-wrap: anywhere;
+		}
+		
+		.keydisplayclosebutton {
+			position: absolute;
+			right: 1em;
+			border-radius: 2em;
+			height: 2em;
+			width: 2em;
+			background-color: #ffffff;
+			color: #ff0000;
+			font-weight: 900;
+			font-size: 1em;
+		
+		}
+		
+		.warning {
+			text-align: center;
+			padding: 0.8em;
+			border-radius: 20px;
+			background-color: #fcffb3;
+		}
+		
+		.warning-holder {
+		
+			margin-right: 5em;
+			margin-left: 5em;
+		
 		}
 		
 		.element {
@@ -340,6 +406,8 @@
 	  <script src="lib/secp256k1-lib.js"></script>
 	  <script src="lib/p5.min.js"></script>
 	  <script src="lib/flatpickr.js"></script>
+	  <script src="lib/nodecrypto.js"></script>
+	  <script src="lib/keys.js"></script>
 	  <script src="sketch.js"></script>
 </head>
 <body onload="onload()">
@@ -372,7 +440,7 @@
 				<li>Edit transactions, output scripts, and signature/witness data</li>
 				<li>Sign and broadcast transactions</li>
 				<li>Export PSBTs or raw transactions</li>
-				<li><s><i>Your editor state is saved in cookies</i></s> <b>Coming soon!</b></li>
+				<li>Your keys <s><i>and editor state</i></s> are saved in cookies <b>Coming soon!</b></li>
 			</ul>
 			<p style="font-size:8px;">This software runs in <b>an untrusted environment</b>, and may contain bugs.
 Ensure that you verify the content of all transactions in your native wallet software after exporting.
@@ -381,7 +449,17 @@ Failure to verify transactions may lead to <b>IRREVOCABLE LOSS OF FUNDS</b>. Thi
     </div>
 	<br></br>
 	<p style="text-align:center"><i> Hold shift and scroll to zoom editor</i></p>
-	<p style="text-align:center">Chain: <select id="chainselector"></select></p>
+	<p style="text-align:center">Chain: <select id="chainselector"></select><button id="keys"></button> <button id="hide">Hide Keys</button></p>
+	<div class="container" id="keysholder">
+		<div class ="warning-holder">
+			<p class="warning">
+				⚠️ These keys are stored in a potentially insecure context and should not be used for purposes other than testing.
+			</p>
+		</div>
+			<p style="text-align:center"><select id="importtypeselector"></select><button id="importkeybtn">Import</button></p>
+		<div class="center" id="keysholderinner">
+		</div>
+	</div>
 	  <main class="canvasHolder">
   </main>
 <div class="container">
