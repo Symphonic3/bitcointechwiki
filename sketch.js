@@ -2847,34 +2847,62 @@ class UTXODisplay extends InputOutputDisplayElement {
 		fill(100);
 		noStroke();
 		textAlign(CENTER, CENTER);
-
+		
+		let utx = this.utxo;
+		
 		textSize(20 / canvasStepRatioY());
-		let txid = this.utxo.getTXID();
+		let txid = utx.getTXID();
 		let texta = txid == null ? "?TX (OUTPUT ONLY)" : txid.substring(0, 7) + "..." + txid.substring(txid.length - 7) + ":" + this.utxo.getOutpoint();
 		text(texta, centerX, pos.y + (20 / canvasStepRatioY()));
 
 		textSize(14.5 / canvasStepRatioY());
 
-		let ad = this.utxo.getAddress();
+		let ad = utx.getAddress();
 		let textb = getAddressType(ad) + ": " + (ad.length <= 14 ? ad : ad.substring(0, 7) + "..." + ad.substring(ad.length - 7));
 		text(textb, centerX, pos.y + (35 / canvasStepRatioY()));
 
 		textSize(13 / canvasStepRatioY());
 
-		if (this.utxo.status == Status.STATUS_CONFIRMED) {
+		if (utx.status == Status.STATUS_CONFIRMED) {
 
-			text((this.utxo.iscoinbase ? "COINBASE" : "SPENT") + " #" + this.utxo.confblock, centerX, pos.y + (50 / canvasStepRatioY()));
+			text((utx.iscoinbase ? "COINBASE" : "SPENT") + " #" + utx.confblock, centerX, pos.y + (50 / canvasStepRatioY()));
 
 		} else {
 			
-			text(this.utxo.status.desc, centerX, pos.y + (50 / canvasStepRatioY()));
+			text(utx.status.desc, centerX, pos.y + (50 / canvasStepRatioY()));
 
 		}
 
 		textSize(20 / canvasStepRatioY());
 
-		let bor = this.utxo.remaindervalue;
-		text((bor ? "[" : "") + satsAsBitcoin(this.utxo.getValue()) + (bor ? "]" : ""), centerX, pos.y + yFractional - (16 / canvasStepRatioY()));
+		let bor = utx.remaindervalue;
+		text((bor ? "[" : "") + satsAsBitcoin(utx.getValue()) + (bor ? "]" : ""), centerX, pos.y + yFractional - (16 / canvasStepRatioY()));
+		
+		fill(this.colors.normalcolor);
+		stroke(this.colors.darkcolor);
+		strokeWeight(3 / canvasStepRatioY());
+
+		if (utx.fullData && ((utx.fullData.scriptsig && utx.fullData.scriptsig.length != 0) || (utx.fullData.witness && utx.fullData.witness.length != 0))) { //has sig data
+			
+			let wid = 36;
+			rect(pos.x + (xFractional/2) - (wid/canvasStepRatioY()), pos.y + yFractional/2 - (2/canvasStepRatioY()), (wid*2/canvasStepRatioY()), 30/canvasStepRatioY(), 30/canvasStepRatioY());
+
+			fill(100);
+			noStroke();
+			textSize(17 / canvasStepRatioY());
+			textAlign(CENTER, CENTER);
+			text("Signed", pos.x + (xFractional/2),  pos.y + yFractional/2 - (-14/canvasStepRatioY()));
+			
+		} else if (utx.fullData._recentSig) {
+			
+			circle(pos.x + (xFractional/2), pos.y + yFractional/2 + (13/canvasStepRatioY()), 30/canvasStepRatioY());
+
+			fill(100);
+			noStroke();
+			textSize(50 / canvasStepRatioY());
+			text("*", pos.x + (xFractional/2), pos.y + yFractional/2 + (28/canvasStepRatioY()));
+			
+		}
 
 	}
 
