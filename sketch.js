@@ -296,7 +296,7 @@ function setup() {
 
 	let utxoaddressbutton = new p5.Element(document.getElementById("addutxoaddress"));
 	utxoaddressbutton.mouseClicked(function() {
-		let utx = new UTXO("", 0, Status.STATUS_NEW, -1, null, null, null, new UTXOFullData(), null, null, false, false);
+		let utx = new UTXO("", 0, Status.STATUS_NEW, -1, null, null, true, null, new UTXOFullData(), null, null, false, false);
 		utx.scriptpubkey = bitcoin.address.toOutputScript(prompt("Enter address:"), selchain.bnet).toString("hex");
 		let utxd = new UTXODisplay(
 			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
@@ -308,7 +308,7 @@ function setup() {
 
 	let emptyutxobutton = new p5.Element(document.getElementById("addemptyutxo"));
 	emptyutxobutton.mouseClicked(function() {
-		let utx = new UTXO("", 0, Status.STATUS_NEW, -1, null, null, null, new UTXOFullData(), null, null, false, false);
+		let utx = new UTXO("", 0, Status.STATUS_NEW, -1, null, null, true, null, new UTXOFullData(), null, null, false, false);
 		let utxd = new UTXODisplay(
 			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
 			utx,
@@ -1375,7 +1375,7 @@ class UTXOFullData {
 
 class UTXO {
 
-	constructor(scriptpubkey, value, status, confblock = -1, txid = null, outpoint = null, spendertxid = null, fullData = null, tx = null, spendertx = null, loadablespender = true, iscoinbase = false) {
+	constructor(scriptpubkey, value, status, confblock = -1, txid = null, outpoint = null, remaindervalue = false, spendertxid = null, fullData = null, tx = null, spendertx = null, loadablespender = true, iscoinbase = false) {
 
 		this.scriptpubkey = scriptpubkey; //hex
 		this.value = value;
@@ -1385,6 +1385,9 @@ class UTXO {
 
 		this.txid = txid;
 		this.outpoint = outpoint;
+		
+		this.remaindervalue = remaindervalue;
+		
 		this.spendertxid = spendertxid;
 
 		this.fullData = fullData;
@@ -1519,7 +1522,7 @@ class UTXO {
 // TX/Coin duplication helpers
 //
 
-function duplicateCoin(coin) {
+function duplicateCoin(coin, forceremainder = false) {
 	
 	let fd = coin.fullData ? new UTXOFullData(
 		coin.fullData.scriptsig,
@@ -1527,7 +1530,7 @@ function duplicateCoin(coin) {
 		[...coin.fullData.witness]
 	) : new UTXOFullData();
 	
-	return new UTXO(coin.scriptpubkey, coin.value, coin.status, coin.confblock, coin.txid, coin.outpoint, coin.spendertxid, fd, coin.tx, coin.spendertx, coin.loadablespender, coin.iscoinbase);
+	return new UTXO(coin.scriptpubkey, coin.value, coin.status, coin.confblock, coin.txid, coin.outpoint, forceremainder ? true : coin.remaindervalue, coin.spendertxid, fd, coin.tx, coin.spendertx, coin.loadablespender, coin.iscoinbase);
 	
 }
 
@@ -1550,7 +1553,7 @@ function duplicateInputAsDetached(input) {
 
 function duplicateOutputAsNew(output) {
 	
-	let coin = duplicateCoin(output);
+	let coin = duplicateCoin(output, true);
 	coin.loadablespender = false;
 	coin.status = Status.STATUS_NEW;
 	coin.txid = null;
@@ -1622,6 +1625,7 @@ function loadTXPSBT(rawpsbt) {
 					-1,
 					Buffer.from(btx.ins[i].hash.toString("hex"), "hex").reverse().toString("hex"),
 					btx.ins[i].index,
+					false,
 					null,
 					utxfd,
 					null,
@@ -1649,6 +1653,7 @@ function loadTXPSBT(rawpsbt) {
 					-1,
 					Buffer.from(btx.ins[i].hash.toString("hex"), "hex").reverse().toString("hex"),
 					btx.ins[i].index,
+					false,
 					null,
 					utxfd,
 					null,
@@ -1665,7 +1670,7 @@ function loadTXPSBT(rawpsbt) {
 
 		let utxfd = new UTXOFullData();
 
-		tx.outputs.push(new UTXO(btx.outs[i].script.toString("hex"), btx.outs[i].value, Status.STATUS_NEW, -1, null, null, null, utxfd, tx, null, false, false));
+		tx.outputs.push(new UTXO(btx.outs[i].script.toString("hex"), btx.outs[i].value, Status.STATUS_NEW, -1, null, null, false, null, utxfd, tx, null, false, false));
 
 	}
 	
@@ -1750,6 +1755,7 @@ async function getTransactionFull(txid) {
 					tx.status.confirmed ? tx.status.block_height : -1,
 					tx.vin[i].txid,
 					tx.vin[i].vout,
+					false,
 					txid,
 					utxfd,
 					null,
@@ -1767,6 +1773,7 @@ async function getTransactionFull(txid) {
 					tx.status.confirmed ? tx.status.block_height : -1,
 					tx.vin[i].txid,
 					tx.vin[i].vout,
+					false,
 					txid,
 					utxfd
 				)
@@ -1789,6 +1796,7 @@ async function getTransactionFull(txid) {
 			(outsp[i].spent && outsp[i].status.confirmed) ? outsp[i].status.block_height : -1,
 			txid,
 			i,
+			false,
 			outsp[i].txid,
 			utxfd
 		));
@@ -3097,7 +3105,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 				if (ind == 0) { //Value
 					vr2.appendChild(joinElements([drp, hi2]));
-					utx.remaindervalue = undefined;
+					utx.remaindervalue = false;
 				} else if (ind == 1) { //Remainder
 					vr2.appendChild(drp);
 					utx.remaindervalue = true;
