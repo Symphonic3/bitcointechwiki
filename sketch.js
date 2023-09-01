@@ -1252,7 +1252,9 @@ class Transaction {
 					ss
 				);
 			} catch (e) {
-				print(this.inputs[i]);
+				print(this);
+				print(i);
+				print(e);
 			}
 			if (this.inputs[i].fullData.scriptsig) btx.setInputScript(i, Buffer.from(this.inputs[i].fullData.scriptsig, 'hex'));
 			if (this.inputs[i].fullData.witness && this.inputs[i].fullData.witness.length > 0) btx.setWitness(i, this.inputs[i].fullData.witness.map(x => Buffer.from(x, 'hex')));
