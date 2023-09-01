@@ -549,6 +549,9 @@ function getSeedDisplay(seed) {
 
 function refreshKeysDisplay() {
 	
+	let keywarning = document.getElementById("keywarning");
+	keywarning.style.display = selchain.bnet == bitcoin.networks.bitcoin ? "block" : "none";
+	
 	signing = null;
 	
 	let keysbtn = document.getElementById("keys");
