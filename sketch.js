@@ -215,7 +215,7 @@ function setup() {
 							canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)
 						), 
 						utxo, 
-						utxo.status == Status.STATUS_UTXO_SPENDABLE ? MutabilityType.OUTPUTSONLY : MutabilityType.NONE
+						utxo.status == Status.STATUS_COIN_SPENDABLE ? MutabilityType.OUTPUTSONLY : MutabilityType.NONE
 					)
 				);
 				inp.elt.classList.remove("error");
@@ -244,7 +244,7 @@ function setup() {
 								(sy - (n / 2) * 150) + (i * 150) + 30 + (canvasSize.y / 30 * spawns)
 							),
 							utxo,
-							utxo.status == Status.STATUS_UTXO_SPENDABLE ? MutabilityType.OUTPUTSONLY : MutabilityType.NONE
+							utxo.status == Status.STATUS_COIN_SPENDABLE ? MutabilityType.OUTPUTSONLY : MutabilityType.NONE
 						)
 					);
 
