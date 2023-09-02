@@ -356,12 +356,6 @@ function setup() {
 	
 	//keys
 	
-	let hide = document.getElementById("hide");
-	new p5.Element(hide).mouseClicked(function() {
-		keysholder.style.display = "none";
-		hide.style.display = "none";
-	});
-	
 	let importBtn = document.getElementById("importkeybtn");
 	new p5.Element(importBtn).mouseClicked(function() {
 		let it = ImportType[importTypeSelector.selectedIndex];
@@ -373,8 +367,14 @@ function setup() {
 	
 	let keysbtn = document.getElementById("keys");
 	new p5.Element(keysbtn).mouseClicked(function() {
-		keysholder.style.display  = "block";
-		hide.style.display = "inline";
+		if (keysshown) {
+			keysbtn.innerHTML = selchain.id + " Keys (" + keys.length + ")";
+			keysholder.style.display = "none";
+		} else {
+			keysbtn.innerHTML = "Hide Keys";
+			keysholder.style.display  = "block";	
+		}
+		keysshown = !keysshown;
 	});
 	
 	let importTypeSelector = document.getElementById("importtypeselector");
@@ -399,6 +399,8 @@ let signing = null;
 
 let keys = [];
 
+let keysshown = false;
+
 function getKeysCookieString() {
 	return "bitcointechwiki_keys_///" + selchain.id;
 }
@@ -413,8 +415,7 @@ function loadKeyData() {
 	
 	let keysholder = document.getElementById("keysholder");
 	keysholder.style.display = "none";
-	let hide = document.getElementById("hide");
-	hide.style.display = "none";
+	keysshown = false;
 	
 	signing = null;
 	
