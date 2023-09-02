@@ -2559,23 +2559,25 @@ class Plug {
 		this.cut(side, false);
 
 		//test for cycles
-		let other = (side == ButtonSide.LEFT) ? this.right : this.left;
-
-		if (other != null) {
-
-			let tracked = [element, other];
-			let queue = [element, other];
+		let left = side == ButtonSide.LEFT ? element : this.left;
+		let right = side == ButtonSide.LEFT ? this.right : element;
+		
+		if (left != null && right != null) {
+			
+			let queue = [[left, right]];
 
 			while (queue.length != 0) {
-				let c = queue.pop();
+				let tracked = queue.pop();
+				let c = tracked[tracked.length-1];
 				for (let i = 0; i < c.rightPlugs.length; i++) {
+					let newTrack = [...tracked];
 					let ct = c.rightPlugs[i].right;
 					if (ct != null) {
-						if (tracked.includes(ct)) {
+						if (newTrack.includes(ct)) {
 							return;
 						} else {
-							tracked.push(ct);
-							queue.push(ct);
+							newTrack.push(ct);
+							queue.push(newTrack);
 						}
 					}
 				}
