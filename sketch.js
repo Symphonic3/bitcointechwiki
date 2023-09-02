@@ -870,7 +870,108 @@ function draw() {
 
 	}
 	
-	signlogic: if (mouseClickedThisFrame && signing) {
+	const SigningError = {
+		
+		GENERIC: 0,
+		WRONG_INPUT: 1,
+		UNSUPPORTED_TYPE: 2,
+		NO_TX: 3
+		
+	}
+	
+	function signUTXO(utx, doSH) {
+		if (utx.spendertx && utx.fullData) { //TODO taproot (2)
+			
+			let btx = utx.spendertx.getBitcoin();
+			
+			let ind = utx.spendertx.inputs.indexOf(utx);
+			
+			let scriptHex = utx.scriptpubkey;
+			let add = utx.getAddress();
+			let atype = getAddressType(add);
+			let prevOutScript = Buffer.from(scriptHex, 'hex');
+			
+			let hashType;
+			if (signing.selhash == 0) hashType = bitcoin.Transaction.SIGHASH_ALL; else
+			if (signing.selhash == 1) hashType = bitcoin.Transaction.SIGHASH_NONE; else
+			if (signing.selhash == 2) hashType = bitcoin.Transaction.SIGHASH_SINGLE; else
+			if (signing.selhash == 3) hashType = bitcoin.Transaction.SIGHASH_ALL | bitcoin.Transaction.SIGHASH_ANYONECANPAY; else
+			if (signing.selhash == 4) hashType = bitcoin.Transaction.SIGHASH_NONE | bitcoin.Transaction.SIGHASH_ANYONECANPAY; else
+			if (signing.selhash == 5) hashType = bitcoin.Transaction.SIGHASH_SINGLE | bitcoin.Transaction.SIGHASH_ANYONECANPAY;
+			
+			let value = utx.getValue();
+			
+			let signfinal;
+			
+			let key = signing.key;
+			
+			let ecp = ecpair.ECPairFactory(secp256k1).fromPrivateKey(Buffer.from(key.key, "hex"), {network: selchain.bnet, compressed: key.compressed});
+			
+			let keyAddp2pkh = bitcoin.payments.p2pkh({pubkey: ecp.publicKey, network: selchain.bnet}).address;
+			let keyAddp2wpkh = !key.compressed ? null : bitcoin.payments.p2wpkh({pubkey: ecp.publicKey, network: selchain.bnet}).address;
+			
+			if (
+				(atype == "p2pkh" && keyAddp2pkh != add) ||
+				(atype == "p2wpkh" && keyAddp2wpkh != add)
+			) {
+				return SigningError.WRONG_INPUT;
+			}
+			
+			if (atype == "p2pkh" || atype == "Unknown") {
+				signfinal = btx.hashForSignature(ind, prevOutScript, hashType);
+			} else if (atype == "p2wpkh") {
+				signfinal = btx.hashForWitnessV0(
+					ind, bitcoin.script.compile([
+						bitcoin.opcodes.OP_DUP,
+						bitcoin.opcodes.OP_HASH160,
+						bitcoin.script.decompile(prevOutScript)[1],
+						bitcoin.opcodes.OP_EQUALVERIFY,
+						bitcoin.opcodes.OP_CHECKSIG
+					]), value, hashType
+				);
+			} else if (atype == "p2sh" || atype == "p2wsh") {
+				if (!doSH) return SigningError.GENERIC;
+				let scriptasm = prompt("Enter unhashed locking script:");
+				if (!scriptasm || scriptasm.length == 0) {
+					return SigningError.GENERIC;
+				}
+				let scriptcode = bitcoin.script.fromASM(scriptasm);
+				
+				if (atype == "p2sh") {
+					signfinal = btx.hashForSignature(ind, scriptcode, hashType);
+				} else if (atype == "p2wsh") {
+					signfinal = btx.hashForWitnessV0(ind, scriptcode, value, hashType);
+				}
+				
+			} else {
+				return SigningError.UNSUPPORTED_TYPE;
+			}
+			
+			let sig = bitcoin.script.signature.encode(ecp.sign(signfinal, true), hashType).toString("hex");
+			let pubkey = ecp.publicKey.toString("hex");
+			
+			if (atype == "p2pkh") { //autosig
+				utx.fullData.scriptsig = bitcoin.script.fromASM(sig + " " + pubkey).toString("hex");
+			} else if (atype == "p2wpkh") {
+				utx.fullData.witness = [sig, pubkey];
+			} else {
+				utx.fullData._recentSig = {
+					sig: sig,
+					pubkey: pubkey
+				};
+			}
+			
+			if (selectedItem == hoverElement) selectedItem.onFocused();
+			
+		} else {
+			
+			return SigningError.NO_TX;
+			
+		}
+	
+	}
+	
+	if (mouseClickedThisFrame && signing) {
 		
 		if (hoverElement) {
 			
@@ -878,98 +979,23 @@ function draw() {
 				
 				let utx = hoverElement.utxo;
 				
-				if (utx.spendertx && utx.fullData) { //TODO taproot (2)
-					
-					let btx = utx.spendertx.getBitcoin();
-					
-					let ind = utx.spendertx.inputs.indexOf(utx);
-					
-					let scriptHex = utx.scriptpubkey;
-					let add = utx.getAddress();
-					let atype = getAddressType(add);
-					let prevOutScript = Buffer.from(scriptHex, 'hex');
-					
-					let hashType;
-					if (signing.selhash == 0) hashType = bitcoin.Transaction.SIGHASH_ALL; else
-					if (signing.selhash == 1) hashType = bitcoin.Transaction.SIGHASH_NONE; else
-					if (signing.selhash == 2) hashType = bitcoin.Transaction.SIGHASH_SINGLE; else
-					if (signing.selhash == 3) hashType = bitcoin.Transaction.SIGHASH_ALL | bitcoin.Transaction.SIGHASH_ANYONECANPAY; else
-					if (signing.selhash == 4) hashType = bitcoin.Transaction.SIGHASH_NONE | bitcoin.Transaction.SIGHASH_ANYONECANPAY; else
-					if (signing.selhash == 5) hashType = bitcoin.Transaction.SIGHASH_SINGLE | bitcoin.Transaction.SIGHASH_ANYONECANPAY;
-					
-					let value = utx.getValue();
-					
-					let signfinal;
-					
-					let key = signing.key;
-					
-					let ecp = ecpair.ECPairFactory(secp256k1).fromPrivateKey(Buffer.from(key.key, "hex"), {network: selchain.bnet, compressed: key.compressed});
-					
-					let keyAddp2pkh = bitcoin.payments.p2pkh({pubkey: ecp.publicKey, network: selchain.bnet}).address;
-					let keyAddp2wpkh = !key.compressed ? null : bitcoin.payments.p2wpkh({pubkey: ecp.publicKey, network: selchain.bnet}).address;
-					
-					if (
-						(atype == "p2pkh" && keyAddp2pkh != add) ||
-						(atype == "p2wpkh" && keyAddp2wpkh != add)
-					) {
-							
-						alert("Key does not belong to that input.");
-						signing = null;
-						break signlogic;
-					}
-					
-					if (atype == "p2pkh" || atype == "Unknown") {
-						signfinal = btx.hashForSignature(ind, prevOutScript, hashType);
-					} else if (atype == "p2wpkh") {
-						signfinal = btx.hashForWitnessV0(
-							ind, bitcoin.script.compile([
-								bitcoin.opcodes.OP_DUP,
-								bitcoin.opcodes.OP_HASH160,
-								bitcoin.script.decompile(prevOutScript)[1],
-								bitcoin.opcodes.OP_EQUALVERIFY,
-								bitcoin.opcodes.OP_CHECKSIG
-							]), value, hashType
-						);
-					} else if (atype == "p2sh" || atype == "p2wsh") {
-						let scriptasm = prompt("Enter unhashed locking script:");
-						if (!scriptasm || scriptasm.length == 0) {
-							break signlogic;
-						}
-						let scriptcode = bitcoin.script.fromASM(scriptasm);
-						
-						if (atype == "p2sh") {
-							signfinal = btx.hashForSignature(ind, scriptcode, hashType);
-						} else if (atype == "p2wsh") {
-							signfinal = btx.hashForWitnessV0(ind, scriptcode, value, hashType);
-						}
-						
-					} else {
-						alert("Signing that input type is not yet supported.");
-						signing = null;
-						break signlogic;
-					}
-					
-					let sig = bitcoin.script.signature.encode(ecp.sign(signfinal, true), hashType).toString("hex");
-					let pubkey = ecp.publicKey.toString("hex");
-					
-					if (atype == "p2pkh") { //autosig
-						utx.fullData.scriptsig = bitcoin.script.fromASM(sig + " " + pubkey).toString("hex");
-					} else if (atype == "p2wpkh") {
-						utx.fullData.witness = [sig, pubkey];
-					} else {
-						utx.fullData._recentSig = {
-							sig: sig,
-							pubkey: pubkey
-						};
-					}
-					
-					if (selectedItem == hoverElement) selectedItem.onFocused();
-					
-				} else {
-					
+				let error = signUTXO(utx, true);
+				
+				if (error == SigningError.WRONG_INPUT) {
+					alert("Key does not belong to that input.");
+				} else if (error == SigningError.UNSUPPORTED_TYPE) {
+					alert("Signing that input type is not yet supported.");
+				} else if (error == SigningError.NO_TX) {
 					alert("Failed to find connected TX for signing.");
-					signing = null;
-					break signlogic;
+				}
+				
+			} else if (hoverElement.transaction) {
+				
+				let tx = hoverElement.transaction;
+				
+				for (let i = 0; i < tx.inputs.length; i++) {
+					
+					if (!tx.inputs[i].isSigned()) signUTXO(tx.inputs[i], false);
 					
 				}
 				
@@ -1126,7 +1152,7 @@ function draw() {
 		let ident = bitcoin.crypto.hash160(ecp.publicKey);
 		let fingerprint = ident.toString("hex").slice(0, 8).toUpperCase();
 		
-		text("Click an input to sign with key " + fingerprint, canvasBounds.x/2, canvasBounds.y/40);
+		text("Click an input/tx to sign with key " + fingerprint, canvasBounds.x/2, canvasBounds.y/40);
 		
 	}
 	
@@ -1306,7 +1332,7 @@ class Transaction {
 					nonWitnessUtxo: txe.getBitcoin().toBuffer()
 
 				});
-				if (this.inputs[i].fullData.scriptsig || (this.inputs[i].fullData.witness && this.inputs[i].fullData.witness.length > 0)) {
+				if (this.inputs[i].isSigned()) {
 
 					let thiso = this;
 					psbt.finalizeInput(i, function() {
@@ -1514,6 +1540,10 @@ class UTXO {
 			
 		}
 
+	}
+	
+	isSigned() {
+		return (this.fullData && ((this.fullData.scriptsig && this.fullData.scriptsig.length != 0) || (this.fullData.witness && this.fullData.witness.length != 0)));
 	}
 
 }
@@ -2892,7 +2922,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 		stroke(this.colors.darkcolor);
 		strokeWeight(3 / canvasStepRatioY());
 
-		if (utx.fullData && ((utx.fullData.scriptsig && utx.fullData.scriptsig.length != 0) || (utx.fullData.witness && utx.fullData.witness.length != 0))) { //has sig data
+		if (utx.isSigned()) {
 			
 			let wid = 36;
 			rect(pos.x + (xFractional/2) - (wid/canvasStepRatioY()), pos.y + yFractional/2 - (2/canvasStepRatioY()), (wid*2/canvasStepRatioY()), 30/canvasStepRatioY(), 30/canvasStepRatioY());
