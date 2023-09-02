@@ -583,7 +583,7 @@ function refreshKeysDisplay() {
 	signing = null;
 	
 	let keysbtn = document.getElementById("keys");
-	keysbtn.innerHTML = selchain.id + " Keys (" + keys.length + ")";
+	if (!keysshown) keysbtn.innerHTML = selchain.id + " Keys (" + keys.length + ")";
 	let keysholderinner = document.getElementById("keysholderinner");
 	keysholderinner.innerHTML = "";
 	
