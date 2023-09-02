@@ -81,6 +81,16 @@ Array.prototype.remove = function() {
 	return pn;
 };
 
+function arraysEqual(a, b) {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (a.length !== b.length) return false;
+  for (var i = 0; i < a.length; ++i) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 let uielements = [];
 
 class Point {
@@ -956,7 +966,7 @@ function draw() {
 				utx.fullData._autosigned = {scriptsig: utx.fullData.scriptsig, hash: signfinal.toString("hex")};
 			} else if (atype == "p2wpkh") {
 				utx.fullData.witness = [sig, pubkey];
-				utx.fullData._autosigned = {witness: utx.fullData.witness, hash: signfinal.toString("hex")};
+				utx.fullData._autosigned = {witness: [...utx.fullData.witness], hash: signfinal.toString("hex")};
 			} else {
 				utx.fullData._recentSig = {
 					sig: sig,
@@ -1285,8 +1295,11 @@ class Transaction {
 				print(i);
 				print(e);
 			}
-			if (this.inputs[i].fullData.scriptsig) btx.setInputScript(i, Buffer.from(this.inputs[i].fullData.scriptsig, 'hex'));
-			if (this.inputs[i].fullData.witness && this.inputs[i].fullData.witness.length > 0) btx.setWitness(i, this.inputs[i].fullData.witness.map(x => Buffer.from(x, 'hex')));
+			let atype = getAddressType(this.inputs[i].getAddress());
+			if (rate || (atype != "p2pkh" && atype != "p2wpkh")) {
+				if (this.inputs[i].fullData.scriptsig) btx.setInputScript(i, Buffer.from(this.inputs[i].fullData.scriptsig, 'hex'));
+				if (this.inputs[i].fullData.witness && this.inputs[i].fullData.witness.length > 0) btx.setWitness(i, this.inputs[i].fullData.witness.map(x => Buffer.from(x, 'hex')));	
+			}
 
 		}
 		for (let i = 0; i < this.outputs.length; i++) {
@@ -1459,6 +1472,14 @@ class UTXO {
 							nfee = cf.value;
 						} else if (cf.rate != undefined) {
 							nfee = cf.rate * (tx.getBitcoin(false).weight() / 4)
+						}
+						for (let i = 0; i < tx.inputs.length; i++) {
+							let atype = getAddressType(tx.inputs[i].getAddress());
+							if (atype == "p2pkh") {
+								nfee += 106;
+							} else if (atype == "p2wpkh") {
+								nfee += 27.25;
+							}
 						}
 						nfee = ceil(nfee);
 						let sthis = false;
@@ -2903,7 +2924,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 		let utx = this.utxo;
 		
 		if (utx.fullData && utx.fullData._autosigned && utx.spendertx) {
-			if (utx.fullData._autosigned.scriptsig == utx.fullData.scriptsig || utx.fullData._autosigned.witness == utx.fullData.witness) {
+			if (utx.fullData._autosigned.scriptsig == utx.fullData.scriptsig || arraysEqual(utx.fullData._autosigned.witness, utx.fullData.witness)) {
 				let hashforsig = null;
 				if (utx.fullData._autosigned.scriptsig && getAddressType(utx.getAddress()) == "p2pkh") {
 					hashforsig = utx.spendertx.getBitcoin().hashForSignature(utx.spendertx.inputs.indexOf(utx), Buffer.from(utx.scriptpubkey, 'hex'), parseInt(bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, "hex")).split(" ")[0].slice(-2), 16));
@@ -2913,7 +2934,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 						bitcoin.script.compile([
 							bitcoin.opcodes.OP_DUP,
 							bitcoin.opcodes.OP_HASH160,
-							bitcoin.script.decompile(Buffer.from(utx.fullData.scriptsig, "hex"))[1],
+							bitcoin.script.decompile(Buffer.from(utx.scriptpubkey, "hex"))[1],
 							bitcoin.opcodes.OP_EQUALVERIFY,
 							bitcoin.opcodes.OP_CHECKSIG
 						]), utx.getValue(), parseInt(utx.fullData.witness[0].slice(-2), 16)
