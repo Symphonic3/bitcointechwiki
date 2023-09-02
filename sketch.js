@@ -1722,6 +1722,17 @@ function duplicateTransactionAsNew(tx) {
 function loadTXPSBT(rawpsbt) {
 	
 	let psbt = bitcoin.Psbt.fromBase64(rawpsbt);
+	for (let i = 0; i < psbt.data.inputs.length; i++) {
+		let input = psbt.data.inputs[i];
+		if (!input.finalScriptSig && !i.finalScriptWitness) {
+			psbt.finalizeInput(i, function() { return {
+
+				finalScriptSig: Buffer.from("", 'hex'),
+				finalScriptWitness: undefined
+				
+			}});
+		}
+	}
 	let btx = psbt.extractTransaction();
 	
 	let tx = new Transaction([], [], btx.version, btx.locktime, Status.STATUS_NEW, -1);
