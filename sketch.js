@@ -286,6 +286,7 @@ function setup() {
 	let emptytxbutton = new p5.Element(document.getElementById("addemptytx"));
 	emptytxbutton.mouseClicked(function() {
 		let tx = new Transaction([], [], 2, 0, Status.STATUS_NEW, -1);
+		tx.customfee = { rate: 1 };
 		let txd = new TransactionDisplay(
 			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
 			tx,
@@ -1614,6 +1615,7 @@ function duplicateTransaction(tx) {
 function duplicateTransactionAsNew(tx) {
 	
 	let transaction = new Transaction([], [], tx.version, tx.locktime, Status.STATUS_NEW, -1);
+	transaction.customfee = tx.customfee;
 	for (let i = 0; i < tx.inputs.length; i++) {
 		if (tx.inputs[i].status == Status.STATUS_COIN_SPENDABLE) {
 			transaction.inputs.push(duplicateCoin(tx.inputs[i]));
@@ -4289,7 +4291,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 						if (isNaN(p)) va.classList.add("error"); else {
 							tx.customfee = {
 								rate: p ? p : 0
-							}
+							};
 							updateStatic();
 							des = " (" + getFeevalueDesc() + ")";
 							desc.innerHTML = des;
@@ -4305,14 +4307,14 @@ class TransactionDisplay extends InputOutputDisplayElement {
 						rt = ceil(tx.getBitcoin().weight() / 4);
 						tx.customfee = {
 							value: rt
-						}
+						};
 					}
 					va = HTMLInput("Value (sats)", rt, true, function(e) {
 
 						let p = parseInt(va.value);
 						tx.customfee = {
 							value: p ? p : 0
-						}
+						};
 						updateStatic();
 						des = " (" + getFeerateDesc() + ")";
 						desc.innerHTML = des;
