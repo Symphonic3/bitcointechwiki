@@ -4099,8 +4099,13 @@ class TransactionDisplay extends InputOutputDisplayElement {
 				break;
 			}
 		}
+		
+		function getFlowInfo() {
+			return tx.inputs.length + " in, " + tx.outputs.length + " out (" + satsAsBitcoin(tx.getInAmt()) + ", " + satsAsBitcoin(tx.getOutAmt()) + ")";
+		}
+		
 		insertTableRow("Status", (tx.status == Status.STATUS_CONFIRMED ? "CONFIRMED #" + tx.confblock : tx.status.desctx) + (rbf ? " (RBF)" : ""));
-		insertTableRow("Flow", tx.inputs.length + " in, " + tx.outputs.length + " out (" + satsAsBitcoin(tx.getInAmt()) + ", " + satsAsBitcoin(tx.getOutAmt()) + ")");
+		let flow = insertTableRow("Flow", getFlowInfo());
 
 		let sdr;
 		let edr;
@@ -4161,6 +4166,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 				edr.innerHTML = "";
 				edr.appendChild(await getExport());
 			}
+			flow.innerHTML = getFlowInfo();
 		}
 
 		function getVersionDesc() {
@@ -4262,6 +4268,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 				if (va) va.classList.remove("error");
 
 				let des;
+				let desc;
 
 				if (ind == 0) { //Remainder (Default)
 					va = null;
@@ -4277,14 +4284,19 @@ class TransactionDisplay extends InputOutputDisplayElement {
 						}
 					}
 					va = HTMLInput("Feerate (sat/vB)", rt, true, function(e) {
-
-						let p = parseInt(va.value);
-						tx.customfee = {
-							rate: p ? p : 0
+						
+						let p = parseFloat(va.value);
+						if (isNaN(p)) va.classList.add("error"); else {
+							tx.customfee = {
+								rate: p ? p : 0
+							}
+							updateStatic();
+							des = " (" + getFeevalueDesc() + ")";
+							desc.innerHTML = des;
+							va.classList.remove("error");
 						}
-						updateStatic();
 
-					}, "number");
+					});
 					des = " (" + getFeevalueDesc() + ")";
 				} else if (ind == 2) { //Value
 					let rt;
@@ -4302,12 +4314,14 @@ class TransactionDisplay extends InputOutputDisplayElement {
 							value: p ? p : 0
 						}
 						updateStatic();
+						des = " (" + getFeerateDesc() + ")";
+						desc.innerHTML = des;
 
 					}, "number");
 					des = " (" + getFeerateDesc() + ")";
 				}
 
-				let desc = textAsElement(des);
+				desc = textAsElement(des);
 
 				r.innerHTML = "";
 				r.appendChild(va ? joinElements([drp, va, desc]) : joinElements([drp, desc]));
