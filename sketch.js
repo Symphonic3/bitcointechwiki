@@ -511,7 +511,7 @@ function addExtendedKeyKeys(key, element) {
 	for (let i = 0; i < key.showchildren.length; i++) {
 		let c = key.showchildren[i];
 		let child = (c.hardened ? derivkey.derive(c.n) : derivkey.deriveHardened(c.n));
-		let kd = getSimpleKeyDisplay(new SimpleKey(child.privateKey.toString("hex")));
+		let kd = getSimpleKeyDisplay(new SimpleKey(child.privateKey.toString("hex"), true));
 		let xbutton = document.createElement("button");
 		kd.element.firstChild.innerHTML += " (" + c.n + (c.hardened ? "'" : "") + ")";
 		xbutton.className = "keydisplayclosebutton";
