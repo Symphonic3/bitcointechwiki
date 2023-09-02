@@ -3937,7 +3937,7 @@ class TransactionDisplay extends InputOutputDisplayElement {
 		textAlign(CENTER, CENTER);
 
 		textSize(45 / canvasStepRatioY());
-		let btx = this.transaction.getBitcoin()
+		let btx = this.transaction.getBitcoin();
 		let txid = btx.getId();
 		text(txid.substring(0, 7) + "..." + txid.substring(txid.length - 7), centerX, pos.y + (35 / canvasStepRatioY()));
 
