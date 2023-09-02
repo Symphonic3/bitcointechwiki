@@ -2516,11 +2516,11 @@ class Plug {
 
 	}
 
-	cut(side, force = true) {
+	cut(side, force = true, reorg = false) {
 
 		let t = side == ButtonSide.LEFT ? this.left : this.right;
 		if (t == null) return;
-		this.disconnectLogically();
+		this.disconnectLogically(reorg);
 
 		if (force) t.trySetState(side == ButtonSide.LEFT ? ButtonSide.RIGHT : ButtonSide.LEFT, PlugStackState.MISSING);
 		t.removeVisualPlug(this);
@@ -2539,10 +2539,10 @@ class Plug {
 
 	}
 
-	disconnectLogically() {
+	disconnectLogically(reorg) {
 
 		if (!this.fullyConnected()) return;
-		this.childDisconnectLogically();
+		this.childDisconnectLogically(reorg);
 
 	}
 
@@ -2553,10 +2553,10 @@ class Plug {
 
 	}
 
-	attach(side, element, index = -1) {
+	attach(side, element, index = -1, reorg = false) {
 
 		if (!this.testCompatibility(side, element)) return;
-		this.cut(side, false);
+		this.cut(side, false, reorg);
 
 		//test for cycles
 		let left = side == ButtonSide.LEFT ? element : this.left;
@@ -2652,7 +2652,7 @@ class Plug {
 
 				if (celement != this.previousDragTarget || index != this.previousDragIndex) {
 					if (side == ButtonSide.RIGHT && celement.mutable == MutabilityType.OUTPUTSONLY || celement.mutable == MutabilityType.NONE) break;
-					this.attach(side, celement, index);
+					this.attach(side, celement, index, celement == this.previousDragTarget);
 				}
 				handled = celement == stationary ? null : celement;
 				break;
@@ -2674,7 +2674,7 @@ class Plug {
 
 	}
 
-	childDisconnectLogically() {
+	childDisconnectLogically(reorg) {
 		throw new Error("This needs to be implemented by subclass!");
 	}
 
@@ -2703,11 +2703,11 @@ class TransactionOutPlug extends Plug {
 		super(editable);
 	}
 
-	childDisconnectLogically() {
+	childDisconnectLogically(reorg) {
 		if (this.editable) {
 			this.left.transaction.outputs.remove(this.right.utxo);
 			this.right.utxo.tx = null;
-			if(this.right.rightPlugs[0]) this.right.rightPlugs[0].sever();
+			if(this.right.rightPlugs[0] && !reorg) this.right.rightPlugs[0].sever();
 		} else {
 			this.left.loadedoutputs.remove(this.right.utxo);
 		}
@@ -2752,7 +2752,7 @@ class TransactionInPlug extends Plug {
 		super(editable);
 	}
 
-	childDisconnectLogically() {
+	childDisconnectLogically(reorg) {
 		if (this.editable) {
 			if (this.left.utxo.fullData && this.left.utxo.fullData._autosigned) {
 				this.left.utxo.fullData.scriptsig = "";
