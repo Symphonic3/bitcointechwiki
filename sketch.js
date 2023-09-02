@@ -2703,6 +2703,7 @@ class TransactionOutPlug extends Plug {
 		if (this.editable) {
 			this.left.transaction.outputs.remove(this.right.utxo);
 			this.right.utxo.tx = null;
+			if(this.right.rightPlugs[0]) this.right.rightPlugs[0].sever();
 		} else {
 			this.left.loadedoutputs.remove(this.right.utxo);
 		}
