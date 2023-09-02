@@ -952,8 +952,10 @@ function draw() {
 			
 			if (atype == "p2pkh") { //autosig
 				utx.fullData.scriptsig = bitcoin.script.fromASM(sig + " " + pubkey).toString("hex");
+				utx.fullData._autosigned = {scriptsig: utx.fullData.scriptsig, hash: signfinal.toString("hex")};
 			} else if (atype == "p2wpkh") {
 				utx.fullData.witness = [sig, pubkey];
+				utx.fullData._autosigned = {witness: utx.fullData.witness, hash: signfinal.toString("hex")};
 			} else {
 				utx.fullData._recentSig = {
 					sig: sig,
@@ -2750,6 +2752,11 @@ class TransactionInPlug extends Plug {
 
 	childDisconnectLogically() {
 		if (this.editable) {
+			if (this.left.utxo.fullData && this.left.utxo.fullData._autosigned) {
+				this.left.utxo.fullData.scriptsig = "";
+				this.left.utxo.fullData.witness = [];
+				this.left.utxo.fullData._autosigned = undefined;
+			}
 			this.right.transaction.inputs.remove(this.left.utxo);
 			this.left.utxo.spendertx = null;
 		} else {
@@ -2890,6 +2897,35 @@ class UTXODisplay extends InputOutputDisplayElement {
 		textAlign(CENTER, CENTER);
 		
 		let utx = this.utxo;
+		
+		if (utx.fullData && utx.fullData._autosigned && utx.spendertx) {
+			if (utx.fullData._autosigned.scriptsig == utx.fullData.scriptsig || utx.fullData._autosigned.witness == utx.fullData.witness) {
+				let hashforsig = null;
+				if (utx.fullData._autosigned.scriptsig && getAddressType(utx.getAddress()) == "p2pkh") {
+					hashforsig = utx.spendertx.getBitcoin().hashForSignature(utx.spendertx.inputs.indexOf(utx), Buffer.from(utx.scriptpubkey, 'hex'), parseInt(bitcoin.script.toASM(Buffer.from(utx.fullData.scriptsig, "hex")).split(" ")[0].slice(-2), 16));
+				} else if (utx.fullData._autosigned.witness && getAddressType(utx.getAddress()) == "p2wpkh") {
+					hashforsig = utx.spendertx.getBitcoin().hashForWitnessV0(
+						utx.spendertx.inputs.indexOf(utx), 
+						bitcoin.script.compile([
+							bitcoin.opcodes.OP_DUP,
+							bitcoin.opcodes.OP_HASH160,
+							bitcoin.script.decompile(Buffer.from(utx.fullData.scriptsig, "hex"))[1],
+							bitcoin.opcodes.OP_EQUALVERIFY,
+							bitcoin.opcodes.OP_CHECKSIG
+						]), utx.getValue(), parseInt(utx.fullData.witness[0].slice(-2), 16)
+					);
+				} else {
+					utx.fullData.witness = [];
+					utx.fullData.scriptsig = "";
+				}
+
+				if(hashforsig.toString("hex") != utx.fullData._autosigned.hash){
+					utx.fullData.witness = [];
+					utx.fullData.scriptsig = "";
+				}
+			} else { utx.fullData._autosigned = undefined; }
+
+		}
 		
 		textSize(20 / canvasStepRatioY());
 		let txid = utx.getTXID();
