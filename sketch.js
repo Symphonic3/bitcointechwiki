@@ -387,6 +387,21 @@ function setup() {
 		importTypeSelector.appendChild(option);
 	}
 	
+	let mastersighashtype = document.getElementById("mastersighashtype");
+	mastersighashtype.addEventListener("change", () => signing = null);
+	
+	for (let i = 0; i < SighashStrings.length; i++) {
+		let option = document.createElement("option");
+		option.value = SighashStrings[i];
+		option.text = SighashStrings[i];
+		mastersighashtype.appendChild(option);
+	}
+	
+	let mastersignbtn = document.getElementById("mastersign");
+	new p5.Element(mastersignbtn).mouseClicked(function() {
+		signing = {auto: true, selhash: mastersighashtype.selectedIndex};
+	});
+	
 	loadKeyData();
 	
 }
@@ -430,6 +445,8 @@ function saveKeyData() {
 	
 }
 
+const SighashStrings = ["ALL", "NONE", "SINGLE", "ALL | ANYONECANPAY", "NONE | ANYONECANPAY", "SINGLE | ANYONECANPAY"];
+
 function getSimpleKeyDisplay(key) {
 	let element = document.createElement("div");
 	
@@ -447,11 +464,10 @@ function getSimpleKeyDisplay(key) {
 	let sighashselect = document.createElement("select");
 	sighashselect.addEventListener("change", () => signing = null);
 	
-	let drp2Options = ["ALL", "NONE", "SINGLE", "ALL|ANYONECANPAY", "NONE|ANYONECANPAY", "SINGLE|ANYONECANPAY"];
-	for (let i = 0; i < drp2Options.length; i++) {
+	for (let i = 0; i < SighashStrings.length; i++) {
 		let option = document.createElement("option");
-		option.value = drp2Options[i];
-		option.text = drp2Options[i];
+		option.value = SighashStrings[i];
+		option.text = SighashStrings[i];
 		sighashselect.appendChild(option);
 	}
 	
@@ -891,7 +907,7 @@ function draw() {
 		
 	}
 	
-	function signUTXO(utx, doSH) {
+	function signUTXO(utx, doSH, key) {
 		if (utx.spendertx && utx.fullData) { //TODO taproot (2)
 			
 			let btx = utx.spendertx.getBitcoin();
@@ -914,8 +930,6 @@ function draw() {
 			let value = utx.getValue();
 			
 			let signfinal;
-			
-			let key = signing.key;
 			
 			let ecp = ecpair.ECPairFactory(secp256k1).fromPrivateKey(Buffer.from(key.key, "hex"), {network: selchain.bnet, compressed: key.compressed});
 			
@@ -985,32 +999,72 @@ function draw() {
 	
 	}
 	
-	if (mouseClickedThisFrame && signing) {
-		
-		if (hoverElement) {
+	function trySign(force, key) {
+		if (hoverElement.utxo) {
 			
-			if (hoverElement.utxo) {
-				
-				let utx = hoverElement.utxo;
-				
-				let error = signUTXO(utx, true);
-				
+			let utx = hoverElement.utxo;
+			
+			let error = signUTXO(utx, force, key);
+			
+			if (force) {
 				if (error == SigningError.WRONG_INPUT) {
 					alert("Key does not belong to that input.");
 				} else if (error == SigningError.UNSUPPORTED_TYPE) {
 					alert("Signing that input type is not yet supported.");
 				} else if (error == SigningError.NO_TX) {
 					alert("Failed to find connected TX for signing.");
+				}	
+			}
+			
+		} else if (hoverElement.transaction) {
+			
+			let tx = hoverElement.transaction;
+			
+			for (let i = 0; i < tx.inputs.length; i++) {
+				
+				if (!tx.inputs[i].isSigned()) signUTXO(tx.inputs[i], false, key);
+				
+			}
+			
+		}
+	}
+	
+	if (mouseClickedThisFrame && signing) {
+		
+		if (hoverElement) {
+			
+			if (signing.key) {
+				trySign(true, signing.key);
+			} else { //auto
+				let simplekeys = [];
+				
+				for (let i = 0; i < keys.length; i++) {
+					let k = keys[i];
+					let xkey;
+					if (k.mode == KeyMode.SIMPLE) {
+						simplekeys.push(k);
+						continue;
+					} else if (k.mode == KeyMode.HD_SEED) {
+						xkey = k.xkey;
+					} else if (k.mode == KeyMode.HD_EXTENDED_KEY)  {
+						xkey = k;
+					}
+					
+					let derivkey = ecbip32.BIP32Factory(secp256k1).fromPrivateKey(Buffer.from(xkey.key, "hex"), Buffer.from(xkey.chaincode, "hex"), selchain.bnet);
+					derivkey.__DEPTH = xkey.depth;
+					derivkey.__INDEX = xkey.childn;
+					derivkey.__PARENT_FINGERPRINT = xkey.parentfing;
+					
+					for (let j = 0; j < xkey.showchildren.length; j++) {
+						let c = xkey.showchildren[j];
+						let child = (c.hardened ? derivkey.derive(c.n) : derivkey.deriveHardened(c.n));
+						simplekeys.push(new SimpleKey(child.privateKey.toString("hex"), true));
+					}
+					
 				}
 				
-			} else if (hoverElement.transaction) {
-				
-				let tx = hoverElement.transaction;
-				
-				for (let i = 0; i < tx.inputs.length; i++) {
-					
-					if (!tx.inputs[i].isSigned()) signUTXO(tx.inputs[i], false);
-					
+				for (let i = 0; i < simplekeys.length; i++) {
+					trySign(false, simplekeys[i]);
 				}
 				
 			}
@@ -1162,11 +1216,17 @@ function draw() {
 		textSize(canvasBounds.x/20);
 		textAlign(CENTER, TOP);
 		
-		let ecp = ecpair.ECPairFactory(secp256k1).fromPrivateKey(Buffer.from(signing.key.key, "hex"), {network: selchain.bnet, compressed: signing.key.compressed});
-		let ident = bitcoin.crypto.hash160(ecp.publicKey);
-		let fingerprint = ident.toString("hex").slice(0, 8).toUpperCase();
+		let txt;
+		if (signing.key) {
+			let ecp = ecpair.ECPairFactory(secp256k1).fromPrivateKey(Buffer.from(signing.key.key, "hex"), {network: selchain.bnet, compressed: signing.key.compressed});
+			let ident = bitcoin.crypto.hash160(ecp.publicKey);
+			let fingerprint = ident.toString("hex").slice(0, 8).toUpperCase();
+			txt = "Click an input/tx to sign with key " + fingerprint;
+		} else {
+			txt = "Click an input/tx to sign (auto keys)";
+		}
 		
-		text("Click an input/tx to sign with key " + fingerprint, canvasBounds.x/2, canvasBounds.y/40);
+		text(txt, canvasBounds.x/2, canvasBounds.y/40);
 		
 	}
 	
