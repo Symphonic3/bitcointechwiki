@@ -891,9 +891,9 @@ function setDown(e) {
 	mousePressedReal = e;
 }
 
-document.addEventListener("touchstart", setDown(true));
-document.addEventListener("touchmove", setDown(true));
-document.addEventListener("touchend", setDown(false));
+document.addEventListener("touchstart", () => setDown(true));
+document.addEventListener("touchmove", () => setDown(true));
+document.addEventListener("touchend", () => setDown(false));
 
 let slowFrameRate = 0;
 function draw() {
