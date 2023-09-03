@@ -365,6 +365,7 @@ function setup() {
 		refreshKeysDisplay();
 	});
 	
+	let keysholder = document.getElementById("keysholder");
 	let keysbtn = document.getElementById("keys");
 	new p5.Element(keysbtn).mouseClicked(function() {
 		if (keysshown) {
@@ -375,6 +376,64 @@ function setup() {
 			keysholder.style.display  = "block";	
 		}
 		keysshown = !keysshown;
+	});
+	
+	let toolsholder = document.getElementById("toolsholder");
+	toolsholder.style.display = "none";
+	let tools = document.getElementById("tools");
+	new p5.Element(tools).mouseClicked(function() {
+		if (toolsshown) {
+			tools.innerHTML = "Show Tools";
+			toolsholder.style.display = "none";
+		} else {
+			tools.innerHTML = "Hide Tools";
+			toolsholder.style.display  = "block";	
+		}
+		toolsshown = !toolsshown;
+	});
+	
+	function updateHashes(buffer) {	
+		let sha256 = document.getElementById("sha256");
+		sha256.value = bitcoin.crypto.sha256(buffer).toString("hex");
+		let hash256 = document.getElementById("hash256");
+		hash256.value = bitcoin.crypto.hash256(buffer).toString("hex");
+		let hash160 = document.getElementById("hash160");
+		hash160.value = bitcoin.crypto.hash160(buffer).toString("hex");
+		let ripemd160 = document.getElementById("ripemd160");
+		ripemd160.value = bitcoin.crypto.ripemd160(buffer).toString("hex");
+		let sha1 = document.getElementById("sha1");
+		sha1.value = bitcoin.crypto.sha1(buffer).toString("hex");
+	}
+	
+	let hashtextBox;
+	let hashBox = document.getElementById("hashinhex");
+	hashBox.addEventListener('keyup', function(e) {
+
+		let t = hashBox.value;
+		if (!new RegExp("^[a-fA-F0-9]*$").test(t) || t.length % 2 != 0) {
+			hashBox.classList.add("error");
+		} else {
+			let buf = Buffer.from(t, "hex");
+			let str = '';
+			for (var i = 0; i < t.length; i += 2)
+				str += String.fromCharCode(parseInt(t.substr(i, 2), 16));
+			hashtextBox.value = str;
+			updateHashes(buf);
+			hashBox.classList.remove("error");
+		}
+
+	});
+	
+	hashtextBox = document.getElementById("hashintext");
+	hashtextBox.addEventListener('keyup', function(e) {
+
+		let t = hashtextBox.value;
+		let hexT = t.split("").map(function(c) {
+			return ("0" + c.charCodeAt(0).toString(16)).slice(-2);
+		}).join("");
+		hashBox.value = hexT;
+		updateHashes(Buffer.from(hexT, "hex"));
+
 	});
 	
 	let importTypeSelector = document.getElementById("importtypeselector");
@@ -405,6 +464,8 @@ function setup() {
 	loadKeyData();
 	
 }
+
+let toolsshown = false;
 
 //
 // key management

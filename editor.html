@@ -238,6 +238,12 @@
 			justify-content: center;
 		}
 		
+		.align-center textarea {
+			display: block;
+			margin-left: auto;
+			margin-right: auto;
+		}
+		
 		.center {
 			margin: auto;
 			margin-bottom: 1em;
@@ -275,6 +281,19 @@
 		.center p {
 			text-align: center;
 			overflow-wrap: anywhere;
+		}
+		
+		.flexholder {
+			display: flex;
+			flex-wrap: wrap;
+		}
+		
+		.flexholder>div{
+			flex-grow: 1;
+			flex-shrink: 0;
+			flex-basis: 400px;
+			background: #f1f1f1;
+			padding: 10px;
 		}
 		
 		.keydisplayclosebutton {
@@ -322,8 +341,14 @@
 			margin-right: 10px;
 		}
 		
-		textarea {
+		table textarea {
 			resize: vertical;
+		}
+		
+		textarea {
+			width: auto;
+			box-sizing: border-box;
+			width: 95%;
 		}
 		
 		.canvasHolder {
@@ -450,6 +475,30 @@
 			<p style="font-size:9px;">This software runs in <b>an untrusted environment</b>, and may contain bugs. Keys in this tool are stored in unsecure localStorage, and could be read by other applications or lost due to trivial memory corruption or cache clearing. Do not import sensitive keys, and ensure you have backups of all keys you wish to preserve. Ensure that you verify the content of all transactions in your native wallet software after exporting. Failure to verify transactions may lead to <b>IRREVOCABLE LOSS OF FUNDS</b>. This software is distributed under the AGPLv3 license and contains limitations of liability. For more information, see the license file in the <a href="https://github.com/Symphonic3/bitcointechwiki">GitHub repo</a></p>
         </div>
     </div>
+	<p style="text-align:center"><button id="tools">Show Tools</button></p>
+	<div class="container" id="toolsholder">
+		<div class="flexholder">
+			<div class="align-center">
+				<p style="text-align:center">Input (Hex):</p>
+				<textarea placeholder="Enter data to be hashed" id="hashinhex"></textarea>
+				<p style="text-align:center">Input (Text):</p>
+				<textarea placeholder="Enter text to be hashed" id="hashintext"></textarea>
+				<p style="text-align:center">sha256:</p>
+				<textarea id="sha256" disabled="true"></textarea>
+				<p style="text-align:center">hash256:</p>
+				<textarea id="hash256" disabled="true"></textarea>
+				<p style="text-align:center">hash160:</p>
+				<textarea id="hash160" disabled="true"></textarea>
+				<p style="text-align:center">ripemd160:</p>
+				<textarea id="ripemd160" disabled="true"></textarea>
+				<p style="text-align:center">sha1:</p>
+				<textarea id="sha1" disabled="true"></textarea>
+			</div>
+			<div>
+
+			</div>
+		</div>
+	</div>
 	<p style="text-align:center"><i> Hold shift and scroll to zoom editor</i></p>
 	<p style="text-align:center">Chain: <select id="chainselector"></select><button id="keys"></button></p>
 	<div class="container" id="keysholder">
