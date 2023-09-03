@@ -436,6 +436,11 @@ function setup() {
 
 	});
 	
+	let csprng = document.getElementById("csprng");
+	new p5.Element(csprng).mouseClicked(function() {
+		document.getElementById("csprngout").value = nodecrypto.randomBytes(parseInt(document.getElementById("csprngcount").value)).toString("hex");
+	});
+	
 	let importTypeSelector = document.getElementById("importtypeselector");
 	importTypeSelector.innerHTML = "";
 	for (let i = 0; i < ImportType.length; i++) {

@@ -341,11 +341,8 @@
 			margin-right: 10px;
 		}
 		
-		table textarea {
-			resize: vertical;
-		}
-		
 		textarea {
+			resize: vertical;
 			width: auto;
 			box-sizing: border-box;
 			width: 95%;
@@ -495,7 +492,8 @@
 				<textarea id="sha1" disabled="true"></textarea>
 			</div>
 			<div>
-
+				<p style="text-align:center">CSPRNG (32 bytes for a key): <input id="csprngcount" type="number" value="32"></input> <button id="csprng">Generate</button></p>
+				<textarea disabled="true" id="csprngout"></textarea>
 			</div>
 		</div>
 	</div>
