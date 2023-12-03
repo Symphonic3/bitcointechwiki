@@ -194,28 +194,21 @@ function setup() {
 	/*uielements.push(
 	  new InputOutputDisplayElement(new BoundingBox(new Point(-25, -270), 50, 50))
 	); //TEST*/
-	let inp = new p5.Element(document.getElementById("loaderinput"));
-
-	function doInput() {
-		let input = inp.value();
-		inp.value(null);
-
+	
+	function loadItem(input, doError, doSuccess) {
 		if (input.length == 64 && new RegExp("^[a-fA-F0-9]+$").test(input)) { //tx
 
 			getTransactionFull(input).catch((error) => {
-				inp.elt.classList.add("error");
+				doError();
 			}).then((tx) => {
-
 				uielements.push(new TransactionDisplay(new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)), tx, MutabilityType.NONE));
-				inp.elt.classList.remove("error");
-				
+				doSuccess();
 			});
-
 
 		} else if (input.length >= 66 && new RegExp("^[a-fA-F0-9]+$").test(input.substring(0, 64)) && input.substring(64, 65) == ":") { //utxo
 
 			getUtxo(input.substring(0, 64), input.substring(65, input.length)).catch((error) => {
-				inp.elt.classList.add("error");
+				doError();
 			}).then((utxo) => {
 
 				uielements.push(
@@ -228,7 +221,7 @@ function setup() {
 						utxo.status == Status.STATUS_COIN_SPENDABLE ? MutabilityType.OUTPUTSONLY : MutabilityType.NONE
 					)
 				);
-				inp.elt.classList.remove("error");
+				doSuccess();
 
 			});
 
@@ -236,7 +229,7 @@ function setup() {
 			//inp.elt.classList.add("error");
 
 			let utxos = getAddressUtxos(input).catch((error) => {
-				inp.elt.classList.add("error");
+				doError();
 			}).then((utxos) => {
 
 				let n = utxos.length;
@@ -262,11 +255,21 @@ function setup() {
 
 				spawns++;
 				
-				inp.elt.classList.remove("error");
+				doSuccess();
 
 			});
 
 		}
+	}
+	
+	let inp = new p5.Element(document.getElementById("loaderinput"));
+	
+	function doInput() {
+		let input = inp.value();
+		inp.value(null);
+		
+		loadItem(input, () => {inp.elt.classList.add("error");}, () => {inp.elt.classList.remove("error");});
+
 	}
 	inp.elt.addEventListener('keypress', function(e) {
 		if (e.key === 'Enter') {
@@ -467,6 +470,12 @@ function setup() {
 	});
 	
 	loadKeyData();
+	
+	//load from URL
+	let query = window.location.search.substring(1);
+	if (query.startsWith("d=")) {
+		loadItem(query.substring(2), () => {}, () => {});
+	}
 	
 }
 
