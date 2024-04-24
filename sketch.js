@@ -1807,11 +1807,11 @@ function loadTXPSBT(rawpsbt) {
 	let psbt = bitcoin.Psbt.fromBase64(rawpsbt);
 	for (let i = 0; i < psbt.data.inputs.length; i++) {
 		let input = psbt.data.inputs[i];
-		if (!input.finalScriptSig && !i.finalScriptWitness) {
+		if (!input.finalScriptSig && !input.finalScriptWitness) {
 			psbt.finalizeInput(i, function() { return {
 
 				finalScriptSig: Buffer.from("", 'hex'),
-				finalScriptWitness: undefined
+				finalScriptWitness: Buffer.from("", 'hex')
 				
 			}});
 		}
