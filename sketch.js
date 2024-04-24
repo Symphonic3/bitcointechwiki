@@ -1808,12 +1808,20 @@ function loadTXPSBT(rawpsbt) {
 	for (let i = 0; i < psbt.data.inputs.length; i++) {
 		let input = psbt.data.inputs[i];
 		if (!input.finalScriptSig && !input.finalScriptWitness) {
-			psbt.finalizeInput(i, function() { return {
-
-				finalScriptSig: Buffer.from("", 'hex'),
-				finalScriptWitness: Buffer.from("00", 'hex')
-				
-			}});
+			if (input.tapInternalKey) {
+				psbt.finalizeInput(i, function() { return {
+	
+					finalScriptWitness: Buffer.from("00", 'hex')
+					
+				}});
+			} else {
+				psbt.finalizeInput(i, function() { return {
+	
+					finalScriptSig: Buffer.from("", 'hex'),
+					finalScriptWitness: undefined
+					
+				}});
+			}
 		}
 	}
 	let btx = psbt.extractTransaction();
