@@ -1811,7 +1811,7 @@ function loadTXPSBT(rawpsbt) {
 			psbt.finalizeInput(i, function() { return {
 
 				finalScriptSig: Buffer.from("", 'hex'),
-				finalScriptWitness: []
+				finalScriptWitness: Buffer.from("00", 'hex')
 				
 			}});
 		}
