@@ -1757,6 +1757,7 @@ function duplicateOutputAsNew(output) {
 	coin.txid = null;
 	coin.tx = null;
 	coin.outpoint = null;
+	coin.fullData = new UTXOFullData();
 	
 	return coin;
 	
