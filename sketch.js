@@ -3158,7 +3158,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 			textAlign(CENTER, CENTER);
 			text("Signed", pos.x + (xFractional/2),  pos.y + yFractional/2 - (-14/canvasStepRatioY()));
 			
-		} else if (utx.fullData._recentSig) {
+		} else if (utx.fullData?._recentSig) {
 			
 			circle(pos.x + (xFractional/2), pos.y + yFractional/2 + (13/canvasStepRatioY()), 30/canvasStepRatioY());
 
