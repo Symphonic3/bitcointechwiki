@@ -281,11 +281,25 @@ function setup() {
 		doInput();
 	});
 	
-	let importtxbutton = new p5.Element(document.getElementById("addimporttx"));
-	importtxbutton.mouseClicked(function() {
+	let importpsbtbutton = new p5.Element(document.getElementById("addimportpsbt"));
+	importpsbtbutton.mouseClicked(function() {
 		let p = prompt("Enter Base64 PSBT:");
 		if (!p.startsWith("cHNid")) throw new Error("Obviously not PSBT"); //sanity check
 		let tx = loadTXPSBT(p);
+		let txd = new TransactionDisplay(
+			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
+			tx,
+			MutabilityType.ALL
+		);
+		txd.addButtonPushed(ButtonSide.LEFT, true);
+		txd.addButtonPushed(ButtonSide.RIGHT, true);
+		uielements.push(txd);
+	});
+
+	let importtxrawbutton = new p5.Element(document.getElementById("addimporttxraw"));
+	importtxrawbutton.mouseClicked(async function() {
+		let p = prompt("Enter raw transaction:");
+		let tx = await loadTXRaw(p);
 		let txd = new TransactionDisplay(
 			new Point(canvasOrigin.x + canvasSize.x / 2 + (canvasSize.x / 30 * spawns), canvasOrigin.y + canvasSize.y / 2 + (canvasSize.y / 30 * spawns++)),
 			tx,
@@ -1802,6 +1816,50 @@ function duplicateTransactionAsNew(tx) {
 //
 // BitcoinJS tx loading
 //
+
+async function loadTXRaw(rawtx) {
+	const btx = bitcoin.Transaction.fromHex(rawtx);
+
+	let tx = new Transaction([], [], btx.version, btx.locktime, Status.STATUS_NEW, -1);
+
+	for (let i = 0; i < btx.ins.length; i++) {
+		let utxfd = new UTXOFullData(btx.ins[i].script, btx.ins[i].sequence, btx.ins[i].witness.map(x => x.toString("hex")) );
+
+		if (btx.isCoinbase()) {
+			let valsum = 0;
+			for (let i = 0; i < btx.outs.length; i++) valsum += btx.outs[i].value;
+			tx.inputs.push(
+				new UTXO(
+					"",
+					valsum,
+					Status.STATUS_COIN_DETACHED,
+					-1,
+					Buffer.from(btx.ins[i].hash.toString("hex"), "hex").reverse().toString("hex"),
+					btx.ins[i].index,
+					false,
+					null,
+					utxfd,
+					null,
+					tx,
+					false,
+					true
+				)
+			);
+		} else {
+			const utxo = await getUtxo(Buffer.from(btx.ins[i].hash).reverse().toString('hex'), btx.ins[i].index);
+			utxo.fullData = utxfd;
+			tx.inputs.push(utxo);
+		}
+	}
+
+	for (let i = 0; i < btx.outs.length; i++) {
+		let utxfd = new UTXOFullData();
+
+		tx.outputs.push(new UTXO(btx.outs[i].script.toString("hex"), btx.outs[i].value, Status.STATUS_NEW, -1, null, null, false, null, utxfd, tx, null, false, false));
+	}
+	
+	return tx;
+}
 
 function loadTXPSBT(rawpsbt) {
 	
