@@ -3905,7 +3905,7 @@ class UTXODisplay extends InputOutputDisplayElement {
 
 			function getSPK() {
 				const decompiled = bitcoin.script.decompile(Buffer.from(utx.scriptpubkey, 'hex'));
-				return decompiled === null ? "PROVABLY_UNSPENDABLE" : bitcoin.script.toASM(decompiled, 'hex');
+				return decompiled === null ? "PROVABLY_UNSPENDABLE" : bitcoin.script.toASM(decompiled);
 			}
 
 			function doUpdating(field, mutatorConditioner) {
