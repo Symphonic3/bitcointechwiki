@@ -29,14 +29,14 @@ let chainparams = [
 		endpointnetwork: "mainnet"
 	},
 	{
-		id: "Testnet",
-		symbol: "testnet",
+		id: "Testnet4",
+		symbol: "testnet4",
 		p2shprefix: "2",
 		bech: "tb",
 		p2pkhprefixes: ["m","n"],
 		bnet: bitcoin.networks.testnet,
 		endpoint: "mempool.space",
-		endpointnetwork: "testnet"
+		endpointnetwork: "testnet4"
 		
 	},
 	{
