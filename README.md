@@ -8,7 +8,8 @@ A modern resource for bitcoin information, and a second-generation, visual trans
 
 In order to use this tool trustlessly and securely, you need to download at a minimum editor.html and sketch.js from the project files.
 
-You should also download the latest version of the mempoolJS API and reference that directly in editor.html, instead of fetching it from their servers as it is currently.
+~~You should also download the latest version of the mempoolJS API and reference that directly in editor.html, instead of fetching it from their servers as it is currently.~~
+*We have removed the remote mempool.js api reference as they have stopped updating it. It is now referenced directly from the lib folder, with our own edited copy. Convenient!
 
 You can then edit the chainparams array in sketch.js to point to your self-hosted [mempool.space](https://github.com/mempool/mempool) instance, which should be connected to your own node.
 
