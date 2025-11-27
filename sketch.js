@@ -1703,8 +1703,9 @@ class UTXO {
 	getAddress() {
 		
 		if (this.scriptpubkey.startsWith("6a")) { //OP_RETURN
-			
-			return bitcoin.script.toASM(Buffer.from(this.scriptpubkey, 'hex'));
+
+			const decompiled = bitcoin.script.decompile(Buffer.from(this.scriptpubkey, 'hex'));
+			return decompiled === null ? "NONSTANDARD" : bitcoin.script.toASM(decompiled);
 			
 		} else {
 			
@@ -3903,7 +3904,8 @@ class UTXODisplay extends InputOutputDisplayElement {
 			let tabs = [];
 
 			function getSPK() {
-				return bitcoin.script.toASM(Buffer.from(utx.scriptpubkey, 'hex'), 'hex');
+				const decompiled = bitcoin.script.decompile(Buffer.from(utx.scriptpubkey, 'hex'));
+				return decompiled === null ? "PROVABLY_UNSPENDABLE" : bitcoin.script.toASM(decompiled, 'hex');
 			}
 
 			function doUpdating(field, mutatorConditioner) {
