@@ -598,8 +598,8 @@ function addExtendedKeyKeys(key, element) {
 	loadchildbtn.innerHTML = "Load Child";
 	new p5.Element(loadchildbtn).mouseClicked(function () {
 		let index = prompt("Enter child index:");
-		key.showchildren = key.showchildren.filter(item => item.n != parseInt(index) || item.hardened != false);
-		key.showchildren.push({n: parseInt(index), hardened: false});
+		key.showchildren = key.showchildren.filter(item => item.n != parseInt(index) || item.isHardened != false);
+		key.showchildren.push({n: parseInt(index), isHardened: false});
 		saveKeyData();
 		refreshKeysDisplay();
 	});
@@ -609,8 +609,8 @@ function addExtendedKeyKeys(key, element) {
 	loadhardenedchildbtn.innerHTML = "Load Hardened Child";
 	new p5.Element(loadhardenedchildbtn).mouseClicked(function () {
 		let index = prompt("Enter hardened child index:");
-		key.showchildren = key.showchildren.filter(item => item.n != parseInt(index) || item.hardened != true);
-		key.showchildren.push({n: parseInt(index), hardened: true});
+		key.showchildren = key.showchildren.filter(item => item.n != parseInt(index) || item.isHardened != true);
+		key.showchildren.push({n: parseInt(index), isHardened: true});
 		saveKeyData();
 		refreshKeysDisplay();
 	});
@@ -626,10 +626,13 @@ function addExtendedKeyKeys(key, element) {
 	
 	for (let i = 0; i < key.showchildren.length; i++) {
 		let c = key.showchildren[i];
-		let child = (c.hardened ? derivkey.derive(c.n) : derivkey.deriveHardened(c.n));
+		//migrate from old swapped-around wrong notation
+		if (c.hardened !== undefined)
+			c.isHardened = !c.hardened;
+		let child = c.isHardened ? derivkey.deriveHardened(c.n) : derivkey.derive(c.n);
 		let kd = getSimpleKeyDisplay(new SimpleKey(child.privateKey.toString("hex"), true));
 		let xbutton = document.createElement("button");
-		kd.element.firstChild.innerHTML += " (" + c.n + (c.hardened ? "'" : "") + ")";
+		kd.element.firstChild.innerHTML += " (" + c.n + (c.isHardened ? "'" : "") + ")";
 		xbutton.className = "keydisplayclosebutton";
 		xbutton.innerHTML = "X";
 		new p5.Element(xbutton).mouseClicked(function() {
@@ -741,7 +744,7 @@ class ExtendedKey {
 		this.childn = childn;
 		this.parentfing = parentfing;
 		
-		this.showchildren = []; //array of {n: int, hardened: bool}
+		this.showchildren = []; //array of {n: int, isHardened: bool}
 		
 	}
 	
@@ -1154,7 +1157,10 @@ function draw() {
 					
 					for (let j = 0; j < xkey.showchildren.length; j++) {
 						let c = xkey.showchildren[j];
-						let child = (c.hardened ? derivkey.derive(c.n) : derivkey.deriveHardened(c.n));
+						//migrate from old swapped-around wrong notation
+						if (c.hardened !== undefined)
+							c.isHardened = !c.hardened;
+						let child = c.isHardened ? derivkey.deriveHardened(c.n) : derivkey.derive(c.n);
 						simplekeys.push(new SimpleKey(child.privateKey.toString("hex"), true));
 					}
 					
