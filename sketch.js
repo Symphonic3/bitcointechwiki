@@ -627,8 +627,11 @@ function addExtendedKeyKeys(key, element) {
 	for (let i = 0; i < key.showchildren.length; i++) {
 		let c = key.showchildren[i];
 		//migrate from old swapped-around wrong notation
-		if (c.hardened !== undefined)
+		if (c.hardened !== undefined) {
 			c.isHardened = !c.hardened;
+			delete c.hardened;
+			saveKeyData();
+		}
 		let child = c.isHardened ? derivkey.deriveHardened(c.n) : derivkey.derive(c.n);
 		let kd = getSimpleKeyDisplay(new SimpleKey(child.privateKey.toString("hex"), true));
 		let xbutton = document.createElement("button");
@@ -1157,9 +1160,6 @@ function draw() {
 					
 					for (let j = 0; j < xkey.showchildren.length; j++) {
 						let c = xkey.showchildren[j];
-						//migrate from old swapped-around wrong notation
-						if (c.hardened !== undefined)
-							c.isHardened = !c.hardened;
 						let child = c.isHardened ? derivkey.deriveHardened(c.n) : derivkey.derive(c.n);
 						simplekeys.push(new SimpleKey(child.privateKey.toString("hex"), true));
 					}
