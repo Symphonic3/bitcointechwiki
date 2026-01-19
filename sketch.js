@@ -907,22 +907,14 @@ let btnHover = false;
 
 let mousePressedReal = false;
 
-function setPrimaryButtonState(e) {
-  var flags = e.buttons !== undefined ? e.buttons : e.which;
-  mousePressedReal = (flags & 1) === 1;
-}
-
-document.addEventListener("mousedown", setPrimaryButtonState);
-document.addEventListener("mousemove", setPrimaryButtonState);
-document.addEventListener("mouseup", setPrimaryButtonState);
-
 function setDown(e) {
 	mousePressedReal = e;
 }
 
-document.addEventListener("touchstart", () => setDown(true));
-document.addEventListener("touchmove", () => setDown(true));
-document.addEventListener("touchend", () => setDown(false));
+document.addEventListener("pointerdown", () => setDown(true));
+//document.addEventListener("pointermove", () => setDown(true));
+document.addEventListener("pointerup", () => setDown(false));
+document.addEventListener("pointercancel", () => setDown(false));
 
 let slowFrameRate = 0;
 function draw() {
