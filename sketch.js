@@ -1192,7 +1192,7 @@ function draw() {
 
 	if (mouseDroppedThisFrame) {
 
-		if (mouseX == mouseClickedX && mouseY == mouseClickedY && !loadingSelection) {
+		if ((Math.abs(mouseX - mouseClickedX) < 5) && (Math.abs(mouseY - mouseClickedY) < 5) && !loadingSelection) {
 			//select ui items
 			let nselectedItem;
 			if (hoverElement == null) {
