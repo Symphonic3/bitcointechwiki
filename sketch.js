@@ -1,5 +1,5 @@
 /*
- * bitcointech.wiki transaction editor - a second-generation, visual bitcoin transaction editor
+ * bitcointech.space transaction editor - a second-generation, visual bitcoin transaction editor
  * Copyright (C) 2023  Symphonic
  *
  * This program is free software: you can redistribute it and/or modify
